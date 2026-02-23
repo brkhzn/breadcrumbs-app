@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#0a0a0b">
+  <title>Breadcrumbs - AT Protocol</title>
+  <style>
+    :root{--bg:#0a0a0b;--bg2:#141416;--bg3:#1c1c1f;--bg4:#232326;--text:#fafafa;--text2:#a1a1aa;--text3:#71717a;--border:#27272a;--accent:#f97316;--book:#22c55e;--tv:#8b5cf6;--movie:#f59e0b;--game:#ef4444;--other:#06b6d4;--bsky:#0085ff;--r:14px}
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{height:100%;overflow:hidden}
+    body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--text);line-height:1.5}
+    #app{height:100%;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+    .screen{display:none;flex-direction:column;height:100%}.screen.active{display:flex}
+    
+    /* Auth */
+    .auth{justify-content:center;align-items:center;padding:24px}
+    .auth-box{width:100%;max-width:360px;text-align:center}
+    .auth-logo{font-size:56px;margin-bottom:12px}
+    .auth h1{font-family:Georgia,serif;font-style:italic;font-size:32px;font-weight:400;margin-bottom:8px}
+    .auth p{color:var(--text2);margin-bottom:32px}
+    .auth-section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:16px;text-align:left}
+    .auth-section h3{font-size:14px;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+    .auth-section p{font-size:12px;color:var(--text3);margin-bottom:16px}
+    .bsky-badge{background:var(--bsky);color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:600}
+    .at-badge{background:#6366f1;color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:600}
+    .auth input{width:100%;padding:12px 14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:15px;margin-bottom:12px}
+    .auth input:focus{outline:none;border-color:var(--accent)}
+    .auth input::placeholder{color:var(--text3)}
+    .btn{width:100%;padding:14px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;border:none;display:flex;align-items:center;justify-content:center;gap:8px}
+    .btn-bsky{background:var(--bsky);color:#fff}
+    .btn-bsky:hover{background:#0070dd}
+    .btn-secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border);margin-top:12px}
+    .auth-note{font-size:11px;color:var(--text3);margin-top:16px;padding:12px;background:var(--bg2);border-radius:8px;text-align:left}
+    .auth-note a{color:var(--bsky)}
+    .auth-error{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;padding:12px;border-radius:8px;font-size:13px;margin-bottom:12px;display:none}
+    .auth-error.show{display:block}
+    
+    /* Header */
+    .header{padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);background:var(--bg)}
+    .header-title{font-family:Georgia,serif;font-style:italic;font-size:22px;display:flex;align-items:center;gap:8px}
+    .header-badge{font-size:9px;background:var(--bsky);color:#fff;padding:2px 6px;border-radius:4px;font-weight:600;font-style:normal}
+    .add-btn{width:44px;height:44px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:24px;cursor:pointer}
+    
+    /* Content */
+    .content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 20px}
+    .entries{display:flex;flex-direction:column;gap:14px}
+    .loading-entries{text-align:center;padding:40px;color:var(--text3)}
+    .loading-entries .spinner{margin:0 auto 16px}
+    
+    /* Cards */
+    .card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+    .card-main{display:flex;padding:14px;gap:12px}
+    .card-cover{width:64px;height:90px;border-radius:8px;object-fit:cover;background:var(--bg3)}
+    .card-icon{width:64px;height:90px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0}
+    .card-icon.book{background:rgba(34,197,94,0.15);color:var(--book)}
+    .card-icon.tv{background:rgba(139,92,246,0.15);color:var(--tv)}
+    .card-icon.movie{background:rgba(245,158,11,0.15);color:var(--movie)}
+    .card-icon.game{background:rgba(239,68,68,0.15);color:var(--game)}
+    .card-icon.other{background:rgba(6,182,212,0.15);color:var(--other)}
+    .card-info{flex:1;min-width:0}
+    .card-meta{display:flex;justify-content:space-between;margin-bottom:4px}
+    .card-type{font-size:10px;font-weight:600;text-transform:uppercase;padding:3px 8px;border-radius:12px}
+    .card-type.book{background:rgba(34,197,94,0.15);color:var(--book)}
+    .card-type.tv{background:rgba(139,92,246,0.15);color:var(--tv)}
+    .card-type.movie{background:rgba(245,158,11,0.15);color:var(--movie)}
+    .card-type.game{background:rgba(239,68,68,0.15);color:var(--game)}
+    .card-type.other{background:rgba(6,182,212,0.15);color:var(--other)}
+    .card-date{font-size:11px;color:var(--text3)}
+    .card-title{font-size:16px;font-weight:600;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .card-subtitle{font-size:11px;color:var(--text3);margin-bottom:2px}
+    .card-progress{font-size:13px;color:var(--accent);font-weight:500;margin-bottom:4px}
+    .card-notes{font-size:12px;color:var(--text2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .card-actions{display:flex;border-top:1px solid var(--border)}
+    .card-action{flex:1;padding:11px;background:none;border:none;color:var(--text2);font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px}
+    .card-action:first-child{border-right:1px solid var(--border)}
+    .card-action.accent{color:var(--accent)}
+    
+    /* Empty */
+    .empty{text-align:center;padding:60px 20px}
+    .empty-icon{font-size:48px;margin-bottom:16px}
+    .empty h3{font-family:Georgia,serif;font-style:italic;font-size:22px;margin-bottom:8px}
+    .empty p{color:var(--text2);font-size:14px}
+    
+    /* Tabs */
+    .tabs{display:flex;background:var(--bg2);border-top:1px solid var(--border);padding:8px 16px;padding-bottom:calc(8px + env(safe-area-inset-bottom))}
+    .tab{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px}
+    .tab.active{color:var(--accent)}
+    .tab-label{font-size:10px;margin-top:4px}
+    .tab-panel{display:none;flex-direction:column;height:100%}.tab-panel.active{display:flex}
+    
+    /* Modal */
+    .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;display:none;align-items:flex-end}
+    .modal-bg.active{display:flex}
+    .modal{width:100%;max-height:85vh;background:var(--bg2);border-radius:var(--r) var(--r) 0 0;display:flex;flex-direction:column}
+    .modal-head{display:flex;justify-content:space-between;align-items:center;padding:18px 20px;border-bottom:1px solid var(--border)}
+    .modal-title{font-size:17px;font-weight:600}
+    .modal-close{width:32px;height:32px;border-radius:50%;background:var(--bg3);border:none;color:var(--text2);font-size:18px;cursor:pointer}
+    .modal-body{flex:1;overflow-y:auto;padding:20px}
+    
+    /* Form */
+    .form-group{margin-bottom:18px}
+    .form-label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:8px}
+    .form-input{width:100%;padding:12px 14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:16px}
+    .form-input:focus{outline:none;border-color:var(--accent)}
+    .form-input::placeholder{color:var(--text3)}
+    .form-textarea{min-height:80px;resize:vertical}
+    
+    /* Type selector */
+    .types{display:flex;gap:8px}
+    .type-btn{width:50px;height:50px;border-radius:10px;background:var(--bg);border:2px solid var(--border);font-size:22px;cursor:pointer}
+    .type-btn.active{border-color:var(--accent);background:var(--accent)}
+    
+    /* Search */
+    .search-wrap{position:relative}
+    .search-results{position:absolute;top:100%;left:0;right:0;background:var(--bg3);border:1px solid var(--border);border-radius:10px;margin-top:4px;max-height:280px;overflow-y:auto;z-index:100;display:none}
+    .search-results.active{display:block}
+    .search-item{display:flex;align-items:center;gap:12px;padding:12px;cursor:pointer;border-bottom:1px solid var(--border)}
+    .search-item:last-child{border-bottom:none}
+    .search-item:hover{background:var(--bg4)}
+    .search-item img{width:45px;height:65px;object-fit:cover;border-radius:6px;background:var(--bg)}
+    .search-item-info{flex:1;min-width:0}
+    .search-item-title{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .search-item-meta{font-size:11px;color:var(--text3)}
+    .search-loading,.search-empty{padding:20px;text-align:center;color:var(--text3);font-size:13px}
+    
+    /* Selected media */
+    .selected-media{display:flex;gap:14px;padding:14px;background:var(--bg);border-radius:10px;margin-bottom:18px}
+    .selected-media img{width:70px;height:100px;object-fit:cover;border-radius:8px}
+    .selected-media-info{flex:1}
+    .selected-media-title{font-size:16px;font-weight:600;margin-bottom:4px}
+    .selected-media-meta{font-size:12px;color:var(--text2);margin-bottom:2px}
+    .selected-media-clear{background:none;border:none;color:var(--accent);font-size:12px;cursor:pointer;padding:0;margin-top:8px}
+    .hidden{display:none!important}
+    
+    /* Genres & Rating */
+    .genres{display:flex;flex-wrap:wrap;gap:6px}
+    .genre{padding:7px 12px;background:var(--bg);border:1px solid var(--border);border-radius:16px;font-size:12px;cursor:pointer}
+    .genre.active{background:var(--accent);border-color:var(--accent);color:#fff}
+    .stars{display:flex;gap:6px}
+    .star{font-size:26px;cursor:pointer}
+    .btn-primary{background:var(--accent);color:#fff}
+    .btn-danger{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#fca5a5}
+    
+    /* AI Modal */
+    .ai-modal{position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:1001;display:none;align-items:center;justify-content:center;padding:20px}
+    .ai-modal.active{display:flex}
+    .ai-box{width:100%;max-width:380px;max-height:75vh;background:var(--bg2);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column}
+    .ai-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+    .ai-head h3{font-size:15px;display:flex;align-items:center;gap:8px}
+    .ai-body{flex:1;overflow-y:auto;padding:20px}
+    .ai-text{font-size:14px;line-height:1.7}
+    .ai-text strong{color:var(--accent)}
+    .ai-foot{padding:14px;border-top:1px solid var(--border);text-align:center;font-size:11px;color:var(--accent)}
+    .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin:30px auto}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    
+    /* Stats */
+    .stats{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:14px}
+    .stats-title{font-size:15px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+    .bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+    .bar-label{width:70px;font-size:12px}
+    .bar-track{flex:1;height:20px;background:var(--bg);border-radius:5px;overflow:hidden}
+    .bar-fill{height:100%;border-radius:5px}
+    .bar-count{width:24px;text-align:right;font-size:12px;color:var(--text2)}
+    
+    /* Settings */
+    .settings-section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:14px;overflow:hidden}
+    .settings-head{font-size:11px;font-weight:600;color:var(--text2);padding:14px 18px 10px;text-transform:uppercase}
+    .settings-item{display:flex;align-items:center;padding:14px 18px;border-top:1px solid var(--border);cursor:pointer;gap:12px}
+    .settings-item:hover{background:var(--bg3)}
+    .settings-text{flex:1;font-size:14px}
+    .user-info{display:flex;align-items:center;gap:12px;padding:18px}
+    .user-avatar{width:48px;height:48px;border-radius:50%;background:var(--bsky);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:18px;overflow:hidden}
+    .user-avatar img{width:100%;height:100%;object-fit:cover}
+    .user-handle{font-size:14px;font-weight:500}
+    .user-did{font-size:11px;color:var(--text3);word-break:break-all}
+    .user-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--bsky);margin-top:4px}
+    .about{text-align:center;padding:30px}
+    .about-logo{font-size:44px;margin-bottom:10px}
+    .about-name{font-family:Georgia,serif;font-style:italic;font-size:24px;margin-bottom:4px}
+    .about-ver{font-size:12px;color:var(--text3);margin-bottom:8px}
+    .about-tag{font-size:13px;color:var(--text2);font-style:italic}
+    .about-atp{font-size:11px;color:var(--bsky);margin-top:12px}
+    
+    /* Toast */
+    .toast-box{position:fixed;top:20px;left:20px;right:20px;z-index:2000}
+    .toast{padding:12px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:8px;animation:slideIn 0.3s}
+    .toast.success{border-color:var(--book);background:rgba(34,197,94,0.1)}
+    .toast.error{border-color:#ef4444;background:rgba(239,68,68,0.1)}
+    @keyframes slideIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+    
+    /* Sync indicator */
+    .sync-indicator{position:fixed;bottom:80px;right:20px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:8px 14px;font-size:12px;display:none;align-items:center;gap:6px;z-index:999}
+    .sync-indicator.active{display:flex}
+    .sync-indicator .mini-spinner{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--bsky);border-radius:50%;animation:spin 0.8s linear infinite}
+  </style>
+</head>
+<body>
+<div id="app">
+  <!-- Auth -->
+  <div id="auth-screen" class="screen auth active">
+    <div class="auth-box">
+      <div class="auth-logo">🍞</div>
+      <h1>Breadcrumbs</h1>
+      <p>Never lose your place again</p>
+      
+      <div class="auth-section">
+        <h3><span class="bsky-badge">BLUESKY</span> Sign in with AT Protocol</h3>
+        <p>Your data stays in your personal data server. You own it.</p>
+        
+        <div class="auth-error" id="auth-error"></div>
+        
+        <input type="text" id="auth-handle" placeholder="yourhandle.bsky.social">
+        <input type="password" id="auth-password" placeholder="App Password">
+        
+        <button class="btn btn-bsky" id="signin-btn">
+          🦋 Sign in with Bluesky
+        </button>
+      </div>
+      
+      <div class="auth-note">
+        <strong>🔐 Security Note:</strong> Use an <a href="https://bsky.app/settings/app-passwords" target="_blank">App Password</a>, not your main password. App passwords can be revoked anytime.
+        <br><br>
+        <strong>📦 Data Ownership:</strong> Your breadcrumbs are stored in YOUR data repository on the AT Protocol network. If this app disappears, your data doesn't.
+      </div>
+      
+      <button class="btn btn-secondary" id="demo-btn">Try Demo (Local Only)</button>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div id="main-screen" class="screen">
+    <!-- Timeline -->
+    <div id="timeline-panel" class="tab-panel active">
+      <div class="header">
+        <div class="header-title">
+          <span>🍞</span> Breadcrumbs
+          <span class="header-badge" id="atp-badge" style="display:none">ATP</span>
+        </div>
+        <button class="add-btn" id="add-btn">+</button>
+      </div>
+      <div class="content">
+        <div id="loading-entries" class="loading-entries hidden">
+          <div class="spinner"></div>
+          <p>Loading from your PDS...</p>
+        </div>
+        <div id="entries" class="entries"></div>
+        <div id="empty" class="empty hidden">
+          <div class="empty-icon">🔖</div>
+          <h3>No breadcrumbs yet</h3>
+          <p>Tap + to log where you left off in a book, show, movie, or game.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Analytics -->
+    <div id="analytics-panel" class="tab-panel">
+      <div class="header"><div class="header-title">📊 Analytics</div></div>
+      <div class="content">
+        <div class="stats">
+          <div class="stats-title">📈 <span id="total-count">0 Entries</span></div>
+          <div id="chart"></div>
+        </div>
+        <div class="stats">
+          <div class="stats-title">🎯 By Genre</div>
+          <div id="genre-chart"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div id="settings-panel" class="tab-panel">
+      <div class="header"><div class="header-title">⚙️ Settings</div></div>
+      <div class="content">
+        <div class="settings-section">
+          <div class="user-info">
+            <div class="user-avatar" id="avatar">?</div>
+            <div style="flex:1;min-width:0">
+              <div class="user-handle" id="user-handle">@handle</div>
+              <div class="user-did" id="user-did"></div>
+              <div class="user-badge" id="user-badge" style="display:none">🦋 Connected via AT Protocol</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="settings-section">
+          <div class="settings-head">Data</div>
+          <div class="settings-item" id="export-btn"><span>📥</span><span class="settings-text">Export Data (JSON)</span><span>›</span></div>
+          <div class="settings-item" id="refresh-btn"><span>🔄</span><span class="settings-text">Refresh from PDS</span><span>›</span></div>
+        </div>
+        
+        <div class="settings-section">
+          <div class="settings-head">Account</div>
+          <div class="settings-item" id="logout-btn"><span>🚪</span><span class="settings-text">Sign Out</span><span>›</span></div>
+        </div>
+        
+        <div class="about">
+          <div class="about-logo">🍞</div>
+          <div class="about-name">Breadcrumbs</div>
+          <div class="about-ver">Version 2.0.0</div>
+          <div class="about-tag">Never lose your place again.</div>
+          <div class="about-atp">Powered by AT Protocol 🦋</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-tab="timeline"><span>📚</span><span class="tab-label">Timeline</span></button>
+      <button class="tab" data-tab="analytics"><span>📊</span><span class="tab-label">Analytics</span></button>
+      <button class="tab" data-tab="settings"><span>⚙️</span><span class="tab-label">Settings</span></button>
+    </div>
+  </div>
+
+  <!-- Entry Modal -->
+  <div class="modal-bg" id="entry-modal">
+    <div class="modal">
+      <div class="modal-head">
+        <span class="modal-title" id="modal-title">New Entry</span>
+        <button class="modal-close" id="modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <div class="form-label">Type</div>
+          <div class="types" id="types">
+            <button class="type-btn active" data-t="book">📚</button>
+            <button class="type-btn" data-t="tv">📺</button>
+            <button class="type-btn" data-t="movie">🎬</button>
+            <button class="type-btn" data-t="game">🎮</button>
+            <button class="type-btn" data-t="other">📦</button>
+          </div>
+        </div>
+        
+        <div id="selected-media" class="selected-media hidden">
+          <img id="selected-img" src="" alt="">
+          <div class="selected-media-info">
+            <div class="selected-media-title" id="selected-title"></div>
+            <div class="selected-media-meta" id="selected-meta1"></div>
+            <div class="selected-media-meta" id="selected-meta2"></div>
+            <button class="selected-media-clear" id="clear-selection">✕ Clear selection</button>
+          </div>
+        </div>
+        
+        <div class="form-group" id="search-group">
+          <div class="form-label">Search</div>
+          <div class="search-wrap">
+            <input class="form-input" id="f-search" placeholder="Search for a title..." autocomplete="off">
+            <div class="search-results" id="search-results"></div>
+          </div>
+        </div>
+
+        <div class="form-group" id="title-group">
+          <div class="form-label">Title</div>
+          <input class="form-input" id="f-title" placeholder="Title">
+        </div>
+
+        <div class="form-group">
+          <div class="form-label" id="progress-label">Page Number</div>
+          <input class="form-input" id="f-progress" placeholder="e.g., Page 150">
+        </div>
+
+        <div class="form-group">
+          <div class="form-label">Genre</div>
+          <div class="genres" id="genres">
+            <span class="genre" data-g="Sci-Fi">Sci-Fi</span>
+            <span class="genre" data-g="Fantasy">Fantasy</span>
+            <span class="genre" data-g="Drama">Drama</span>
+            <span class="genre" data-g="Thriller">Thriller</span>
+            <span class="genre" data-g="Comedy">Comedy</span>
+            <span class="genre" data-g="Horror">Horror</span>
+            <span class="genre" data-g="Romance">Romance</span>
+            <span class="genre" data-g="Action">Action</span>
+            <span class="genre" data-g="RPG">RPG</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <div class="form-label">Rating</div>
+          <div class="stars" id="stars">
+            <span class="star" data-r="1">☆</span>
+            <span class="star" data-r="2">☆</span>
+            <span class="star" data-r="3">☆</span>
+            <span class="star" data-r="4">☆</span>
+            <span class="star" data-r="5">☆</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <div class="form-label">Notes</div>
+          <textarea class="form-input form-textarea" id="f-notes" placeholder="What's happening?"></textarea>
+        </div>
+
+        <button class="btn btn-primary" id="save-btn">Save Entry</button>
+        <button class="btn btn-danger hidden" id="delete-btn" style="margin-top:10px">🗑️ Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Modal -->
+  <div class="ai-modal" id="ai-modal">
+    <div class="ai-box">
+      <div class="ai-head">
+        <h3><span style="color:var(--accent)">✨</span> <span id="ai-title">Title</span></h3>
+        <button class="modal-close" id="ai-close">✕</button>
+      </div>
+      <div class="ai-body" id="ai-body"></div>
+      <div class="ai-foot">⭐ Premium Feature</div>
+    </div>
+  </div>
+
+  <div class="toast-box" id="toasts"></div>
+  <div class="sync-indicator" id="sync-indicator"><div class="mini-spinner"></div> Syncing...</div>
+</div>
+
+<script>
+// ========== AT PROTOCOL CONFIG ==========
+var ATP_COLLECTION = 'app.breadcrumbs.entry'; // Custom lexicon for breadcrumbs
+var DEFAULT_PDS = 'https://bsky.social';
+
+// Session state
+var session = null; // { did, handle, accessJwt, refreshJwt, pds }
+var entries = [];
+var editId = null;
+var editRkey = null;
+var selType = 'book';
+var selGenre = '';
+var selRating = 0;
+var selectedMedia = null;
+var searchTimeout = null;
+var isDemo = false;
+
+// API keys for media search
+var TMDB_KEY = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI2OGRkOTMwYWI2MzdhYmYyNzk4MTdkMzNhZDg2OWQ2ZSIsIm5iZiI6MTc0NzI3MjMxNi4xNzksInN1YiI6IjY4MjVlMjdjOGU5ZTI4YjcyYmMwNDY5OCIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.v1tacryptkmjKLhUcLzNqy1EFrpqwJY_JpXSMWsqRqY';
+
+var icons = {book:'📚',tv:'📺',movie:'🎬',game:'🎮',other:'📦'};
+var labels = {book:'Book',tv:'TV',movie:'Movie',game:'Game',other:'Other'};
+var progLabels = {book:'Page Number',tv:'Episode & Timecode',movie:'Timecode',game:'Quest/Chapter',other:'Progress'};
+var progPlace = {book:'e.g., Page 150',tv:'e.g., S2 E5 - 23:45',movie:'e.g., 1:23:45',game:'e.g., Act 2 - Quest Name',other:'Where did you leave off?'};
+
+var summaries = {
+  'Project Hail Mary':'<strong>Where you left off:</strong><br><br>Dr. Ryland Grace discovered he\'s not alone. He\'s made contact with <strong>Rocky</strong>, an alien from Erid. They\'re working together to save both planets.<br><br>You just discovered how Astrophage reproduces.',
+  'Severance':'<strong>Where you left off:</strong><br><br>You\'re deep in the Lumon mystery. Helly is trying to escape, Mark found a secret map.<br><br>You stopped right before the <strong>waffle party</strong>.',
+  'Oppenheimer':'<strong>Where you left off:</strong><br><br>You just witnessed the <strong>Trinity test</strong>. The Manhattan Project succeeded.',
+  "Baldur's Gate 3":'<strong>Where you left off:</strong><br><br>Playing as <strong>Dark Urge</strong> in Act 2. Moonrise Towers. Jaheira joined you.'
+};
+
+function $(id){return document.getElementById(id)}
+function $$(sel){return document.querySelectorAll(sel)}
+
+// ========== AT PROTOCOL API ==========
+
+async function atpRequest(method, endpoint, body, pds) {
+  var url = (pds || session?.pds || DEFAULT_PDS) + '/xrpc/' + endpoint;
+  var headers = {'Content-Type': 'application/json'};
+  if (session?.accessJwt) {
+    headers['Authorization'] = 'Bearer ' + session.accessJwt;
+  }
+  
+  var opts = {method: method, headers: headers};
+  if (body && method !== 'GET') {
+    opts.body = JSON.stringify(body);
+  }
+  
+  var res = await fetch(url, opts);
+  var data = await res.json();
+  
+  if (!res.ok) {
+    throw new Error(data.message || data.error || 'Request failed');
+  }
+  return data;
+}
+
+async function atpLogin(handle, password) {
+  // Resolve handle to get PDS
+  var pds = DEFAULT_PDS;
+  
+  // Try to resolve the handle's PDS (for custom domains)
+  try {
+    if (!handle.endsWith('.bsky.social')) {
+      var resolved = await fetch(DEFAULT_PDS + '/xrpc/com.atproto.identity.resolveHandle?handle=' + encodeURIComponent(handle));
+      if (resolved.ok) {
+        var rdata = await resolved.json();
+        // Could look up PDS from DID doc, but for now use default
+      }
+    }
+  } catch(e) {}
+  
+  var data = await atpRequest('POST', 'com.atproto.server.createSession', {
+    identifier: handle,
+    password: password
+  }, pds);
+  
+  session = {
+    did: data.did,
+    handle: data.handle,
+    accessJwt: data.accessJwt,
+    refreshJwt: data.refreshJwt,
+    pds: pds
+  };
+  
+  // Save session
+  localStorage.setItem('bc_atp_session', JSON.stringify(session));
+  
+  return session;
+}
+
+async function atpRefreshSession() {
+  if (!session?.refreshJwt) return false;
+  
+  try {
+    var data = await atpRequest('POST', 'com.atproto.server.refreshSession', {}, session.pds);
+    session.accessJwt = data.accessJwt;
+    session.refreshJwt = data.refreshJwt;
+    localStorage.setItem('bc_atp_session', JSON.stringify(session));
+    return true;
+  } catch(e) {
+    return false;
+  }
+}
+
+async function atpGetEntries() {
+  showSync(true);
+  try {
+    var data = await atpRequest('GET', 'com.atproto.repo.listRecords?repo=' + encodeURIComponent(session.did) + '&collection=' + ATP_COLLECTION + '&limit=100');
+    
+    entries = (data.records || []).map(function(rec) {
+      return {
+        ...rec.value,
+        rkey: rec.uri.split('/').pop(),
+        uri: rec.uri
+      };
+    });
+    
+    // Sort by createdAt descending
+    entries.sort(function(a,b) {
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+    
+    showSync(false);
+    return entries;
+  } catch(e) {
+    showSync(false);
+    // Try refresh token
+    if (e.message.includes('expired') || e.message.includes('Invalid')) {
+      var refreshed = await atpRefreshSession();
+      if (refreshed) return atpGetEntries();
+    }
+    throw e;
+  }
+}
+
+async function atpCreateEntry(entry) {
+  showSync(true);
+  try {
+    var record = {
+      $type: ATP_COLLECTION,
+      type: entry.type,
+      title: entry.title,
+      progress: entry.progress,
+      notes: entry.notes || '',
+      genre: entry.genre || '',
+      rating: entry.rating || 0,
+      cover: entry.cover || '',
+      author: entry.author || '',
+      year: entry.year || '',
+      createdAt: new Date().toISOString()
+    };
+    
+    var data = await atpRequest('POST', 'com.atproto.repo.createRecord', {
+      repo: session.did,
+      collection: ATP_COLLECTION,
+      record: record
+    });
+    
+    showSync(false);
+    return data;
+  } catch(e) {
+    showSync(false);
+    throw e;
+  }
+}
+
+async function atpUpdateEntry(rkey, entry) {
+  // AT Protocol doesn't have update - delete and recreate
+  showSync(true);
+  try {
+    await atpDeleteEntry(rkey);
+    await atpCreateEntry(entry);
+    showSync(false);
+  } catch(e) {
+    showSync(false);
+    throw e;
+  }
+}
+
+async function atpDeleteEntry(rkey) {
+  showSync(true);
+  try {
+    await atpRequest('POST', 'com.atproto.repo.deleteRecord', {
+      repo: session.did,
+      collection: ATP_COLLECTION,
+      rkey: rkey
+    });
+    showSync(false);
+  } catch(e) {
+    showSync(false);
+    throw e;
+  }
+}
+
+function showSync(show) {
+  $('sync-indicator').classList.toggle('active', show);
+}
+
+// ========== INIT ==========
+
+function init() {
+  // Event listeners
+  $('demo-btn').onclick = startDemo;
+  $('signin-btn').onclick = signIn;
+  $('add-btn').onclick = openAdd;
+  $('modal-close').onclick = closeModal;
+  $('entry-modal').onclick = function(e){if(e.target.id==='entry-modal')closeModal()};
+  $('save-btn').onclick = saveEntry;
+  $('delete-btn').onclick = deleteEntry;
+  $('ai-close').onclick = closeAI;
+  $('ai-modal').onclick = function(e){if(e.target.id==='ai-modal')closeAI()};
+  $('export-btn').onclick = exportData;
+  $('refresh-btn').onclick = refreshEntries;
+  $('logout-btn').onclick = logout;
+  $('clear-selection').onclick = clearSelection;
+  
+  $('f-search').oninput = function(){
+    clearTimeout(searchTimeout);
+    var q = this.value.trim();
+    if(q.length < 2){$('search-results').classList.remove('active');return}
+    searchTimeout = setTimeout(function(){searchMedia(q)}, 400);
+  };
+  $('f-search').onfocus = function(){if(this.value.length >= 2)$('search-results').classList.add('active')};
+  
+  $$('.tab').forEach(function(t){t.onclick = function(){switchTab(t.dataset.tab)}});
+  $$('.type-btn').forEach(function(b){b.onclick = function(){pickType(b.dataset.t)}});
+  $$('.genre').forEach(function(g){g.onclick = function(){pickGenre(g.dataset.g)}});
+  $$('.star').forEach(function(s){s.onclick = function(){pickRating(+s.dataset.r)}});
+  
+  document.addEventListener('click', function(e){
+    if(!e.target.closest('.search-wrap'))$('search-results').classList.remove('active');
+  });
+  
+  // Check for saved session
+  var savedSession = localStorage.getItem('bc_atp_session');
+  if (savedSession) {
+    try {
+      session = JSON.parse(savedSession);
+      isDemo = false;
+      showMain();
+      loadEntries();
+    } catch(e) {
+      localStorage.removeItem('bc_atp_session');
+    }
+  }
+  
+  // Check for demo mode
+  var demoMode = localStorage.getItem('bc_demo_mode');
+  if (demoMode) {
+    isDemo = true;
+    showMain();
+    loadDemoEntries();
+  }
+}
+
+// ========== AUTH ==========
+
+async function signIn() {
+  var handle = $('auth-handle').value.trim();
+  var password = $('auth-password').value;
+  var errorEl = $('auth-error');
+  
+  if (!handle || !password) {
+    errorEl.textContent = 'Please enter your handle and app password';
+    errorEl.classList.add('show');
+    return;
+  }
+  
+  // Normalize handle
+  if (!handle.includes('.')) {
+    handle = handle + '.bsky.social';
+  }
+  
+  errorEl.classList.remove('show');
+  $('signin-btn').textContent = 'Signing in...';
+  $('signin-btn').disabled = true;
+  
+  try {
+    await atpLogin(handle, password);
+    isDemo = false;
+    localStorage.removeItem('bc_demo_mode');
+    showMain();
+    await loadEntries();
+    toast('Signed in as @' + session.handle);
+  } catch(e) {
+    errorEl.textContent = e.message || 'Sign in failed. Check your handle and app password.';
+    errorEl.classList.add('show');
+  } finally {
+    $('signin-btn').textContent = '🦋 Sign in with Bluesky';
+    $('signin-btn').disabled = false;
+  }
+}
+
+function startDemo() {
+  isDemo = true;
+  session = null;
+  localStorage.setItem('bc_demo_mode', 'true');
+  showMain();
+  loadDemoEntries();
+  toast('Demo mode - data stored locally');
+}
+
+function logout() {
+  session = null;
+  isDemo = false;
+  entries = [];
+  localStorage.removeItem('bc_atp_session');
+  localStorage.removeItem('bc_demo_mode');
+  localStorage.removeItem('bc_demo_entries');
+  $('auth-screen').classList.add('active');
+  $('main-screen').classList.remove('active');
+  $('auth-error').classList.remove('show');
+  $('auth-handle').value = '';
+  $('auth-password').value = '';
+  toast('Signed out');
+}
+
+function showMain() {
+  $('auth-screen').classList.remove('active');
+  $('main-screen').classList.add('active');
+  
+  if (session) {
+    $('user-handle').textContent = '@' + session.handle;
+    $('user-did').textContent = session.did;
+    $('user-badge').style.display = 'block';
+    $('atp-badge').style.display = 'inline';
+    $('avatar').textContent = session.handle[0].toUpperCase();
+  } else {
+    $('user-handle').textContent = 'Demo User';
+    $('user-did').textContent = 'Local storage only';
+    $('user-badge').style.display = 'none';
+    $('atp-badge').style.display = 'none';
+    $('avatar').textContent = 'D';
+  }
+}
+
+// ========== DATA ==========
+
+async function loadEntries() {
+  $('loading-entries').classList.remove('hidden');
+  $('entries').innerHTML = '';
+  $('empty').classList.add('hidden');
+  
+  try {
+    await atpGetEntries();
+    render();
+    updateStats();
+  } catch(e) {
+    toast('Failed to load entries: ' + e.message, 'error');
+    render();
+  } finally {
+    $('loading-entries').classList.add('hidden');
+  }
+}
+
+function loadDemoEntries() {
+  var saved = localStorage.getItem('bc_demo_entries');
+  if (saved) {
+    entries = JSON.parse(saved);
+  } else {
+    entries = [
+      {rkey:'1',type:'book',title:'Project Hail Mary',author:'Andy Weir',progress:'Page 284',genre:'Sci-Fi',rating:5,notes:'Rocky is amazing.',cover:'https://covers.openlibrary.org/b/isbn/9780593135204-M.jpg',createdAt:new Date(Date.now()-2*86400000).toISOString()},
+      {rkey:'2',type:'tv',title:'Severance',year:'2022',progress:'S1 E7 - 32:15',genre:'Thriller',rating:5,notes:'Waffle party coming up.',cover:'https://image.tmdb.org/t/p/w200/lFf6LLrQjYZKqiPuqcvzL8Fmgmt.jpg',createdAt:new Date(Date.now()-4*86400000).toISOString()},
+      {rkey:'3',type:'movie',title:'Oppenheimer',year:'2023',progress:'1:45:30',genre:'Drama',rating:4,notes:'Trinity test was incredible.',cover:'https://image.tmdb.org/t/p/w200/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg',createdAt:new Date(Date.now()-6*86400000).toISOString()},
+      {rkey:'4',type:'game',title:"Baldur's Gate 3",year:'2023',progress:'Act 2 - Moonrise',genre:'RPG',rating:5,notes:'Dark Urge playthrough.',cover:'https://media.rawg.io/media/games/699/69907ecf13f172e9e1069ff7a9fd7544.jpg',createdAt:new Date(Date.now()-9*86400000).toISOString()}
+    ];
+    saveDemoEntries();
+  }
+  render();
+  updateStats();
+}
+
+function saveDemoEntries() {
+  localStorage.setItem('bc_demo_entries', JSON.stringify(entries));
+}
+
+async function refreshEntries() {
+  if (isDemo) {
+    toast('Demo mode - no server to refresh from');
+    return;
+  }
+  await loadEntries();
+  toast('Refreshed from PDS');
+}
+
+function render() {
+  var list = $('entries');
+  var empty = $('empty');
+  
+  if (!entries.length) {
+    list.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+  
+  empty.classList.add('hidden');
+  
+  list.innerHTML = entries.map(function(e) {
+    var coverHtml = e.cover
+      ? '<img class="card-cover" src="'+e.cover+'" alt="" onerror="this.style.display=\'none\'">'
+      : '<div class="card-icon '+e.type+'">'+icons[e.type]+'</div>';
+    var subtitle = e.author || e.year || '';
+    
+    return '<div class="card"><div class="card-main">'+coverHtml+'<div class="card-info"><div class="card-meta"><span class="card-type '+e.type+'">'+labels[e.type]+'</span><span class="card-date">'+fmtDate(e.createdAt)+'</span></div><div class="card-title">'+esc(e.title)+'</div>'+(subtitle?'<div class="card-subtitle">'+esc(subtitle)+'</div>':'')+'<div class="card-progress">📍 '+esc(e.progress)+'</div>'+(e.notes?'<div class="card-notes">'+esc(e.notes)+'</div>':'')+'</div></div><div class="card-actions"><button class="card-action" onclick="openEdit(\''+e.rkey+'\')">✏️ Edit</button><button class="card-action accent" onclick="showAI(\''+e.rkey+'\')">✨ Catch me up</button></div></div>';
+  }).join('');
+}
+
+function fmtDate(ts) {
+  var d = new Date(ts);
+  var now = new Date();
+  var diff = Math.floor((now - d) / 86400000);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Yesterday';
+  if (diff < 7) return diff + ' days ago';
+  return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' ' + d.getDate();
+}
+
+function esc(s) {
+  if (!s) return '';
+  var d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function switchTab(tab) {
+  $$('.tab').forEach(function(t){t.classList.toggle('active', t.dataset.tab === tab)});
+  $$('.tab-panel').forEach(function(p){p.classList.toggle('active', p.id === tab + '-panel')});
+  if (tab === 'analytics') updateStats();
+}
+
+// ========== MODAL ==========
+
+function openAdd() {
+  editId = null;
+  editRkey = null;
+  selectedMedia = null;
+  $('modal-title').textContent = 'New Entry';
+  $('f-title').value = '';
+  $('f-progress').value = '';
+  $('f-notes').value = '';
+  $('f-search').value = '';
+  $('delete-btn').classList.add('hidden');
+  $('selected-media').classList.add('hidden');
+  $('search-group').classList.remove('hidden');
+  pickType('book');
+  selGenre = '';
+  selRating = 0;
+  updateGenres();
+  updateStars();
+  $('entry-modal').classList.add('active');
+}
+
+function openEdit(rkey) {
+  var e = entries.find(function(x){return x.rkey === rkey});
+  if (!e) return;
+  
+  editId = e.rkey;
+  editRkey = e.rkey;
+  selectedMedia = e.cover ? {poster: e.cover, title: e.title, author: e.author, year: e.year} : null;
+  
+  $('modal-title').textContent = 'Edit Entry';
+  $('f-title').value = e.title;
+  $('f-progress').value = e.progress;
+  $('f-notes').value = e.notes || '';
+  $('f-search').value = '';
+  $('delete-btn').classList.remove('hidden');
+  
+  if (e.cover) {
+    $('selected-media').classList.remove('hidden');
+    $('selected-img').src = e.cover;
+    $('selected-title').textContent = e.title;
+    $('selected-meta1').textContent = e.author || e.year || '';
+    $('selected-meta2').textContent = '';
+    $('search-group').classList.add('hidden');
+  } else {
+    $('selected-media').classList.add('hidden');
+    $('search-group').classList.remove('hidden');
+  }
+  
+  pickType(e.type);
+  selGenre = e.genre || '';
+  selRating = e.rating || 0;
+  updateGenres();
+  updateStars();
+  $('entry-modal').classList.add('active');
+}
+
+function closeModal() {
+  $('entry-modal').classList.remove('active');
+}
+
+function pickType(t) {
+  selType = t;
+  $$('.type-btn').forEach(function(b){b.classList.toggle('active', b.dataset.t === t)});
+  $('progress-label').textContent = progLabels[t];
+  $('f-progress').placeholder = progPlace[t];
+  $('f-search').value = '';
+  $('search-results').classList.remove('active');
+  if (!editId) clearSelection();
+}
+
+function pickGenre(g) {selGenre = selGenre === g ? '' : g; updateGenres()}
+function updateGenres() {$$('.genre').forEach(function(el){el.classList.toggle('active', el.dataset.g === selGenre)})}
+function pickRating(r) {selRating = selRating === r ? 0 : r; updateStars()}
+function updateStars() {$$('.star').forEach(function(s){s.textContent = +s.dataset.r <= selRating ? '⭐' : '☆'})}
+
+async function saveEntry() {
+  var title = $('f-title').value.trim();
+  var progress = $('f-progress').value.trim();
+  var notes = $('f-notes').value.trim();
+  
+  if (!title || !progress) {
+    toast('Enter title and progress', 'error');
+    return;
+  }
+  
+  var entryData = {
+    type: selType,
+    title: title,
+    progress: progress,
+    notes: notes,
+    genre: selGenre,
+    rating: selRating,
+    cover: selectedMedia?.poster || '',
+    author: selectedMedia?.author || '',
+    year: selectedMedia?.year || ''
+  };
+  
+  $('save-btn').textContent = 'Saving...';
+  $('save-btn').disabled = true;
+  
+  try {
+    if (isDemo) {
+      // Demo mode - local storage
+      if (editRkey) {
+        var idx = entries.findIndex(function(e){return e.rkey === editRkey});
+        if (idx >= 0) {
+          entries[idx] = {...entries[idx], ...entryData};
+        }
+      } else {
+        entryData.rkey = Date.now().toString();
+        entryData.createdAt = new Date().toISOString();
+        entries.unshift(entryData);
+      }
+      saveDemoEntries();
+      toast(editRkey ? 'Entry updated!' : 'Entry saved!');
+    } else {
+      // AT Protocol
+      if (editRkey) {
+        await atpUpdateEntry(editRkey, entryData);
+        toast('Entry updated & synced to PDS!');
+      } else {
+        await atpCreateEntry(entryData);
+        toast('Entry saved to your PDS!');
+      }
+      await atpGetEntries();
+    }
+    
+    render();
+    updateStats();
+    closeModal();
+  } catch(e) {
+    toast('Save failed: ' + e.message, 'error');
+  } finally {
+    $('save-btn').textContent = 'Save Entry';
+    $('save-btn').disabled = false;
+  }
+}
+
+async function deleteEntry() {
+  if (!editRkey) return;
+  
+  $('delete-btn').textContent = 'Deleting...';
+  $('delete-btn').disabled = true;
+  
+  try {
+    if (isDemo) {
+      entries = entries.filter(function(e){return e.rkey !== editRkey});
+      saveDemoEntries();
+    } else {
+      await atpDeleteEntry(editRkey);
+      await atpGetEntries();
+    }
+    
+    render();
+    updateStats();
+    closeModal();
+    toast('Entry deleted');
+  } catch(e) {
+    toast('Delete failed: ' + e.message, 'error');
+  } finally {
+    $('delete-btn').textContent = '🗑️ Delete';
+    $('delete-btn').disabled = false;
+  }
+}
+
+// ========== SEARCH ==========
+
+function searchMedia(query) {
+  var results = $('search-results');
+  results.innerHTML = '<div class="search-loading">Searching...</div>';
+  results.classList.add('active');
+  
+  if (selType === 'book') searchBooks(query);
+  else if (selType === 'tv') searchTMDB(query, 'tv');
+  else if (selType === 'movie') searchTMDB(query, 'movie');
+  else if (selType === 'game') searchGames(query);
+  else results.innerHTML = '<div class="search-empty">Manual entry for "Other"</div>';
+}
+
+function searchTMDB(query, type) {
+  fetch('https://api.themoviedb.org/3/search/'+type+'?query='+encodeURIComponent(query), {
+    headers: {Authorization: 'Bearer ' + TMDB_KEY}
+  })
+  .then(function(r){return r.json()})
+  .then(function(data){
+    var results = $('search-results');
+    if (!data.results?.length) {
+      results.innerHTML = '<div class="search-empty">No results</div>';
+      return;
+    }
+    results.innerHTML = data.results.slice(0,6).map(function(item){
+      var title = item.title || item.name;
+      var year = (item.release_date || item.first_air_date || '').slice(0,4);
+      var poster = item.poster_path ? 'https://image.tmdb.org/t/p/w92'+item.poster_path : '';
+      return '<div class="search-item" data-title="'+esc(title)+'" data-year="'+year+'" data-poster="'+(item.poster_path?'https://image.tmdb.org/t/p/w200'+item.poster_path:'')+'">'+(poster?'<img src="'+poster+'">':'<div style="width:45px;height:65px;background:var(--bg);border-radius:6px;display:flex;align-items:center;justify-content:center">'+icons[type]+'</div>')+'<div class="search-item-info"><div class="search-item-title">'+esc(title)+'</div><div class="search-item-meta">'+year+'</div></div></div>';
+    }).join('');
+    results.querySelectorAll('.search-item').forEach(function(item){item.onclick=function(){selectResult(this)}});
+  })
+  .catch(function(){$('search-results').innerHTML='<div class="search-empty">Search failed</div>'});
+}
+
+function searchBooks(query) {
+  fetch('https://www.googleapis.com/books/v1/volumes?q='+encodeURIComponent(query)+'&maxResults=6')
+  .then(function(r){return r.json()})
+  .then(function(data){
+    var results = $('search-results');
+    if (!data.items?.length) {
+      results.innerHTML = '<div class="search-empty">No results</div>';
+      return;
+    }
+    results.innerHTML = data.items.map(function(item){
+      var v = item.volumeInfo;
+      var title = v.title || 'Unknown';
+      var author = (v.authors || []).join(', ') || '';
+      var cover = v.imageLinks?.smallThumbnail || '';
+      return '<div class="search-item" data-title="'+esc(title)+'" data-author="'+esc(author)+'" data-poster="'+esc(cover)+'">'+(cover?'<img src="'+cover+'">':'<div style="width:45px;height:65px;background:var(--bg);border-radius:6px;display:flex;align-items:center;justify-content:center">📚</div>')+'<div class="search-item-info"><div class="search-item-title">'+esc(title)+'</div><div class="search-item-meta">'+esc(author)+'</div></div></div>';
+    }).join('');
+    results.querySelectorAll('.search-item').forEach(function(item){item.onclick=function(){selectResult(this)}});
+  })
+  .catch(function(){$('search-results').innerHTML='<div class="search-empty">Search failed</div>'});
+}
+
+function searchGames(query) {
+  fetch('https://api.rawg.io/api/games?search='+encodeURIComponent(query)+'&page_size=6&key=c542e67aec3a4340908f9de9e86038af')
+  .then(function(r){return r.json()})
+  .then(function(data){
+    var results = $('search-results');
+    if (!data.results?.length) {
+      results.innerHTML = '<div class="search-empty">No results</div>';
+      return;
+    }
+    results.innerHTML = data.results.map(function(item){
+      var year = (item.released || '').slice(0,4);
+      return '<div class="search-item" data-title="'+esc(item.name)+'" data-year="'+year+'" data-poster="'+esc(item.background_image || '')+'">'+(item.background_image?'<img src="'+item.background_image+'">':'<div style="width:45px;height:65px;background:var(--bg);border-radius:6px;display:flex;align-items:center;justify-content:center">🎮</div>')+'<div class="search-item-info"><div class="search-item-title">'+esc(item.name)+'</div><div class="search-item-meta">'+year+'</div></div></div>';
+    }).join('');
+    results.querySelectorAll('.search-item').forEach(function(item){item.onclick=function(){selectResult(this)}});
+  })
+  .catch(function(){$('search-results').innerHTML='<div class="search-empty">Search failed</div>'});
+}
+
+function selectResult(el) {
+  var d = el.dataset;
+  selectedMedia = {title: d.title, poster: d.poster || '', author: d.author || '', year: d.year || ''};
+  
+  $('selected-media').classList.remove('hidden');
+  $('selected-img').src = selectedMedia.poster;
+  $('selected-img').style.display = selectedMedia.poster ? 'block' : 'none';
+  $('selected-title').textContent = selectedMedia.title;
+  $('selected-meta1').textContent = selectedMedia.author || selectedMedia.year;
+  $('selected-meta2').textContent = '';
+  
+  $('f-title').value = selectedMedia.title;
+  $('f-search').value = '';
+  $('search-results').classList.remove('active');
+  $('search-group').classList.add('hidden');
+}
+
+function clearSelection() {
+  selectedMedia = null;
+  $('selected-media').classList.add('hidden');
+  $('search-group').classList.remove('hidden');
+  $('f-title').value = '';
+  $('f-search').value = '';
+}
+
+// ========== AI ==========
+
+function showAI(rkey) {
+  var e = entries.find(function(x){return x.rkey === rkey});
+  if (!e) return;
+  
+  $('ai-title').textContent = e.title;
+  $('ai-body').innerHTML = '<div class="spinner"></div><p style="text-align:center;color:var(--text2)">Generating summary...</p>';
+  $('ai-modal').classList.add('active');
+  
+  setTimeout(function(){
+    var sum = summaries[e.title] || '<strong>Where you left off in '+esc(e.title)+':</strong><br><br>You\'re at <strong>'+esc(e.progress)+'</strong>.'+(e.notes?'<br><br>Your notes: "'+esc(e.notes)+'"':'')+'<br><br>This is a demo. Premium would give you a detailed, spoiler-free recap.';
+    $('ai-body').innerHTML = '<div class="ai-text">'+sum+'</div>';
+  }, 1200);
+}
+
+function closeAI() {$('ai-modal').classList.remove('active')}
+
+// ========== STATS ==========
+
+function updateStats() {
+  $('total-count').textContent = entries.length + ' Entries';
+  
+  var counts = {book:0, tv:0, movie:0, game:0, other:0};
+  var genreCounts = {};
+  entries.forEach(function(e){
+    counts[e.type]++;
+    if (e.genre) genreCounts[e.genre] = (genreCounts[e.genre] || 0) + 1;
+  });
+  
+  var max = Math.max(counts.book, counts.tv, counts.movie, counts.game, counts.other, 1);
+  var html = '';
+  ['book','tv','movie','game','other'].forEach(function(t){
+    if (counts[t] > 0) {
+      html += '<div class="bar-row"><span class="bar-label">'+labels[t]+'</span><div class="bar-track"><div class="bar-fill" style="width:'+(counts[t]/max*100)+'%;background:var(--'+t+')"></div></div><span class="bar-count">'+counts[t]+'</span></div>';
+    }
+  });
+  $('chart').innerHTML = html || '<p style="text-align:center;color:var(--text3)">No data</p>';
+  
+  var genreArr = Object.entries(genreCounts).sort(function(a,b){return b[1]-a[1]});
+  var gmax = genreArr.length ? genreArr[0][1] : 1;
+  var ghtml = '';
+  genreArr.slice(0,5).forEach(function(g){
+    ghtml += '<div class="bar-row"><span class="bar-label">'+g[0]+'</span><div class="bar-track"><div class="bar-fill" style="width:'+(g[1]/gmax*100)+'%;background:var(--accent)"></div></div><span class="bar-count">'+g[1]+'</span></div>';
+  });
+  $('genre-chart').innerHTML = ghtml || '<p style="text-align:center;color:var(--text3)">No genre data</p>';
+}
+
+function exportData() {
+  var blob = new Blob([JSON.stringify({entries: entries, exported: new Date().toISOString(), source: isDemo ? 'demo' : 'atp:'+session?.did}, null, 2)], {type: 'application/json'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'breadcrumbs-'+new Date().toISOString().split('T')[0]+'.json';
+  a.click();
+  toast('Data exported!');
+}
+
+function toast(msg, type) {
+  var t = document.createElement('div');
+  t.className = 'toast ' + (type || 'success');
+  t.textContent = msg;
+  $('toasts').appendChild(t);
+  setTimeout(function(){t.remove()}, 3000);
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
