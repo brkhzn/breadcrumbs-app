@@ -194,9 +194,17 @@
     /* Demo banner */
     .demo-banner{background:linear-gradient(90deg,#065f46,#047857);color:#fff;padding:8px 16px;font-size:12px;text-align:center;font-weight:500}
     
-    /* Desktop max-width */
-    @media(min-width:600px){
-      #app{max-width:480px;margin:0 auto;border-left:1px solid var(--border);border-right:1px solid var(--border)}
+    /* Desktop responsive */
+    @media(min-width:768px){
+      .content{padding:20px 32px}
+      .entries{max-width:600px;margin:0 auto}
+      .header{padding:16px 32px}
+      .tabs{padding:12px 32px;padding-bottom:calc(12px + env(safe-area-inset-bottom))}
+      .stats{max-width:600px;margin:0 auto 14px}
+      .settings-section{max-width:600px;margin:0 auto 14px}
+      .about{max-width:600px;margin:0 auto}
+      .card{transition:transform 0.2s,box-shadow 0.2s}
+      .card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.3)}
     }
     
     /* Sync indicator */
@@ -1040,14 +1048,20 @@ function searchMedia(query) {
 }
 
 function searchTMDB(query, type) {
+  console.log('Searching TMDB for:', query, type);
   fetch('https://api.themoviedb.org/3/search/'+type+'?query='+encodeURIComponent(query), {
     headers: {Authorization: 'Bearer ' + TMDB_KEY}
   })
-  .then(function(r){return r.json()})
+  .then(function(r){
+    console.log('TMDB response status:', r.status);
+    if (!r.ok) throw new Error('TMDB API error: ' + r.status);
+    return r.json();
+  })
   .then(function(data){
+    console.log('TMDB data:', data);
     var results = $('search-results');
     if (!data.results?.length) {
-      results.innerHTML = '<div class="search-empty">No results</div>';
+      results.innerHTML = '<div class="search-empty">No results found</div>';
       return;
     }
     results.innerHTML = data.results.slice(0,6).map(function(item){
@@ -1058,16 +1072,25 @@ function searchTMDB(query, type) {
     }).join('');
     results.querySelectorAll('.search-item').forEach(function(item){item.onclick=function(){selectResult(this)}});
   })
-  .catch(function(){$('search-results').innerHTML='<div class="search-empty">Search failed</div>'});
+  .catch(function(e){
+    console.error('TMDB error:', e);
+    $('search-results').innerHTML='<div class="search-empty">Search unavailable. Enter title manually below.</div>';
+  });
 }
 
 function searchBooks(query) {
+  console.log('Searching Books for:', query);
   fetch('https://www.googleapis.com/books/v1/volumes?q='+encodeURIComponent(query)+'&maxResults=6')
-  .then(function(r){return r.json()})
+  .then(function(r){
+    console.log('Books response status:', r.status);
+    if (!r.ok) throw new Error('Books API error: ' + r.status);
+    return r.json();
+  })
   .then(function(data){
+    console.log('Books data:', data);
     var results = $('search-results');
     if (!data.items?.length) {
-      results.innerHTML = '<div class="search-empty">No results</div>';
+      results.innerHTML = '<div class="search-empty">No results found</div>';
       return;
     }
     results.innerHTML = data.items.map(function(item){
@@ -1079,16 +1102,25 @@ function searchBooks(query) {
     }).join('');
     results.querySelectorAll('.search-item').forEach(function(item){item.onclick=function(){selectResult(this)}});
   })
-  .catch(function(){$('search-results').innerHTML='<div class="search-empty">Search failed</div>'});
+  .catch(function(e){
+    console.error('Books error:', e);
+    $('search-results').innerHTML='<div class="search-empty">Search unavailable. Enter title manually below.</div>';
+  });
 }
 
 function searchGames(query) {
+  console.log('Searching Games for:', query);
   fetch('https://api.rawg.io/api/games?search='+encodeURIComponent(query)+'&page_size=6&key=c542e67aec3a4340908f9de9e86038af')
-  .then(function(r){return r.json()})
+  .then(function(r){
+    console.log('Games response status:', r.status);
+    if (!r.ok) throw new Error('Games API error: ' + r.status);
+    return r.json();
+  })
   .then(function(data){
+    console.log('Games data:', data);
     var results = $('search-results');
     if (!data.results?.length) {
-      results.innerHTML = '<div class="search-empty">No results</div>';
+      results.innerHTML = '<div class="search-empty">No results found</div>';
       return;
     }
     results.innerHTML = data.results.map(function(item){
@@ -1097,7 +1129,10 @@ function searchGames(query) {
     }).join('');
     results.querySelectorAll('.search-item').forEach(function(item){item.onclick=function(){selectResult(this)}});
   })
-  .catch(function(){$('search-results').innerHTML='<div class="search-empty">Search failed</div>'});
+  .catch(function(e){
+    console.error('Games error:', e);
+    $('search-results').innerHTML='<div class="search-empty">Search unavailable. Enter title manually below.</div>';
+  });
 }
 
 function selectResult(el) {
