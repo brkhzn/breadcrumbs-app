@@ -450,9 +450,6 @@ var selectedMedia = null;
 var searchTimeout = null;
 var isDemo = false;
 
-// API keys for media search
-var TMDB_KEY = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI2OGRkOTMwYWI2MzdhYmYyNzk4MTdkMzNhZDg2OWQ2ZSIsIm5iZiI6MTc0NzI3MjMxNi4xNzksInN1YiI6IjY4MjVlMjdjOGU5ZTI4YjcyYmMwNDY5OCIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.v1tacryptkmjKLhUcLzNqy1EFrpqwJY_JpXSMWsqRqY';
-
 var icons = {book:'📚',tv:'📺',movie:'🎬',game:'🎮',other:'📦'};
 var labels = {book:'Book',tv:'TV',movie:'Movie',game:'Game',other:'Other'};
 var progLabels = {book:'Page Number',tv:'Episode & Timecode',movie:'Timecode',game:'Quest/Chapter',other:'Progress'};
@@ -1049,9 +1046,7 @@ function searchMedia(query) {
 
 function searchTMDB(query, type) {
   console.log('Searching TMDB for:', query, type);
-  fetch('https://api.themoviedb.org/3/search/'+type+'?query='+encodeURIComponent(query), {
-    headers: {Authorization: 'Bearer ' + TMDB_KEY}
-  })
+  fetch('/api/tmdb?query='+encodeURIComponent(query)+'&type='+type)
   .then(function(r){
     console.log('TMDB response status:', r.status);
     if (!r.ok) throw new Error('TMDB API error: ' + r.status);
@@ -1110,7 +1105,7 @@ function searchBooks(query) {
 
 function searchGames(query) {
   console.log('Searching Games for:', query);
-  fetch('https://api.rawg.io/api/games?search='+encodeURIComponent(query)+'&page_size=6&key=c542e67aec3a4340908f9de9e86038af')
+  fetch('/api/rawg?query='+encodeURIComponent(query))
   .then(function(r){
     console.log('Games response status:', r.status);
     if (!r.ok) throw new Error('Games API error: ' + r.status);
