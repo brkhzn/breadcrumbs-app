@@ -1,0 +1,66 @@
+{
+  "lexicon": 1,
+  "id": "app.breadcrumbs.podcast",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "A podcast in the user's Breadcrumbs library.",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": ["title", "status", "createdAt"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 512,
+            "description": "The show title, not the episode title."
+          },
+          "creator": {
+            "type": "string",
+            "maxLength": 256,
+            "description": "Host or production company."
+          },
+          "status": {
+            "type": "string",
+            "knownValues": [
+              "app.breadcrumbs.defs#wantTo",
+              "app.breadcrumbs.defs#inProgress",
+              "app.breadcrumbs.defs#completed",
+              "app.breadcrumbs.defs#abandoned",
+              "app.breadcrumbs.defs#onHold"
+            ]
+          },
+          "progress": {
+            "type": "ref",
+            "ref": "app.breadcrumbs.defs#podcastProgress"
+          },
+          "rating": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10,
+            "description": "User rating on a 1–10 scale."
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 3000
+          },
+          "cover": {
+            "type": "blob",
+            "accept": ["image/jpeg", "image/png", "image/webp"],
+            "maxSize": 1000000
+          },
+          "genres": {
+            "type": "array",
+            "items": { "type": "string", "maxLength": 64 },
+            "maxLength": 10
+          },
+          "identifiers": {
+            "type": "ref",
+            "ref": "app.breadcrumbs.defs#podcastIdentifiers"
+          },
+          "createdAt": { "type": "string", "format": "datetime" }
+        }
+      }
+    }
+  }
+}

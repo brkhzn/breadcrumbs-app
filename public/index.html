@@ -7,13 +7,25 @@
   <meta name="theme-color" content="#0a0a0b">
   <title>Breadcrumbs - AT Protocol</title>
   <style>
-    :root{--bg:#0a0a0b;--bg2:#141416;--bg3:#1c1c1f;--bg4:#232326;--text:#fafafa;--text2:#a1a1aa;--text3:#71717a;--border:#27272a;--accent:#f97316;--book:#22c55e;--tv:#8b5cf6;--movie:#f59e0b;--game:#ef4444;--other:#06b6d4;--bsky:#0085ff;--r:14px}
+    :root{
+      --bg:#0a0a0b;--bg2:#141416;--bg3:#1c1c1f;--bg4:#232326;
+      --text:#fafafa;--text2:#a1a1aa;--text3:#71717a;--border:#27272a;
+      --accent:#f97316;
+      --book:#22c55e;--show:#8b5cf6;--movie:#f59e0b;--game:#ef4444;--podcast:#fb923c;
+      --bsky:#0085ff;--r:14px
+    }
+    @media(prefers-color-scheme:light){
+      :root{
+        --bg:#f8f8f6;--bg2:#ffffff;--bg3:#f0f0ee;--bg4:#e8e8e5;
+        --text:#18181b;--text2:#52525b;--text3:#a1a1aa;--border:#e4e4e7
+      }
+    }
     *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
     html,body{height:100%;overflow:hidden}
     body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--text);line-height:1.5}
     #app{height:100%;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
     .screen{display:none;flex-direction:column;height:100%}.screen.active{display:flex}
-    
+
     /* Auth */
     .auth{justify-content:center;align-items:center;padding:24px}
     .auth-box{width:100%;max-width:360px;text-align:center}
@@ -24,7 +36,6 @@
     .auth-section h3{font-size:14px;margin-bottom:4px;display:flex;align-items:center;gap:8px}
     .auth-section p{font-size:12px;color:var(--text3);margin-bottom:16px}
     .bsky-badge{background:var(--bsky);color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:600}
-    .at-badge{background:#6366f1;color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:600}
     .auth input{width:100%;padding:12px 14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:15px;margin-bottom:12px}
     .auth input:focus{outline:none;border-color:var(--accent)}
     .auth input::placeholder{color:var(--text3)}
@@ -36,82 +47,104 @@
     .auth-note a{color:var(--bsky)}
     .auth-error{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;padding:12px;border-radius:8px;font-size:13px;margin-bottom:12px;display:none}
     .auth-error.show{display:block}
-    
+
     /* Header */
     .header{padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);background:var(--bg)}
     .header-title{font-family:Georgia,serif;font-style:italic;font-size:22px;display:flex;align-items:center;gap:8px}
     .header-badge{font-size:9px;background:var(--bsky);color:#fff;padding:2px 6px;border-radius:4px;font-weight:600;font-style:normal}
     .add-btn{width:44px;height:44px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:24px;cursor:pointer}
-    
+
     /* Content */
     .content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 20px}
     .entries{display:flex;flex-direction:column;gap:14px}
     .loading-entries{text-align:center;padding:40px;color:var(--text3)}
     .loading-entries .spinner{margin:0 auto 16px}
-    
+
     /* Cards */
     .card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
     .card-main{display:flex;padding:14px;gap:12px}
-    .card-cover{width:64px;height:90px;border-radius:8px;object-fit:cover;background:var(--bg3)}
-    .card-icon{width:64px;height:90px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0}
-    .card-icon.book{background:rgba(34,197,94,0.15);color:var(--book)}
-    .card-icon.tv{background:rgba(139,92,246,0.15);color:var(--tv)}
-    .card-icon.movie{background:rgba(245,158,11,0.15);color:var(--movie)}
-    .card-icon.game{background:rgba(239,68,68,0.15);color:var(--game)}
-    .card-icon.other{background:rgba(6,182,212,0.15);color:var(--other)}
+    .card-accent{width:3px;flex-shrink:0;border-radius:2px}
+    .card-accent.book{background:var(--book)}
+    .card-accent.show{background:var(--show)}
+    .card-accent.movie{background:var(--movie)}
+    .card-accent.game{background:var(--game)}
+    .card-accent.podcast{background:var(--podcast)}
+    .card-cover{width:60px;height:86px;border-radius:8px;object-fit:cover;background:var(--bg3);flex-shrink:0}
+    .card-icon{width:60px;height:86px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0}
+    .card-icon.book{background:rgba(34,197,94,0.12);color:var(--book)}
+    .card-icon.show{background:rgba(139,92,246,0.12);color:var(--show)}
+    .card-icon.movie{background:rgba(245,158,11,0.12);color:var(--movie)}
+    .card-icon.game{background:rgba(239,68,68,0.12);color:var(--game)}
+    .card-icon.podcast{background:rgba(251,146,60,0.12);color:var(--podcast)}
     .card-info{flex:1;min-width:0}
-    .card-meta{display:flex;justify-content:space-between;margin-bottom:4px}
+    .card-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
     .card-type{font-size:10px;font-weight:600;text-transform:uppercase;padding:3px 8px;border-radius:12px}
-    .card-type.book{background:rgba(34,197,94,0.15);color:var(--book)}
-    .card-type.tv{background:rgba(139,92,246,0.15);color:var(--tv)}
-    .card-type.movie{background:rgba(245,158,11,0.15);color:var(--movie)}
-    .card-type.game{background:rgba(239,68,68,0.15);color:var(--game)}
-    .card-type.other{background:rgba(6,182,212,0.15);color:var(--other)}
+    .card-type.book{background:rgba(34,197,94,0.12);color:var(--book)}
+    .card-type.show{background:rgba(139,92,246,0.12);color:var(--show)}
+    .card-type.movie{background:rgba(245,158,11,0.12);color:var(--movie)}
+    .card-type.game{background:rgba(239,68,68,0.12);color:var(--game)}
+    .card-type.podcast{background:rgba(251,146,60,0.12);color:var(--podcast)}
     .card-date{font-size:11px;color:var(--text3)}
     .card-title{font-size:16px;font-weight:600;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .card-subtitle{font-size:11px;color:var(--text3);margin-bottom:2px}
-    .card-progress{font-size:13px;color:var(--accent);font-weight:500;margin-bottom:4px}
+    .card-subtitle{font-size:11px;color:var(--text3);margin-bottom:3px}
+    .card-progress{font-size:13px;color:var(--accent);font-weight:500;margin-bottom:3px}
+    .card-status{font-size:11px;color:var(--text3);margin-bottom:3px}
     .card-notes{font-size:12px;color:var(--text2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
     .card-actions{display:flex;border-top:1px solid var(--border)}
     .card-action{flex:1;padding:11px;background:none;border:none;color:var(--text2);font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px}
     .card-action:first-child{border-right:1px solid var(--border)}
     .card-action.accent{color:var(--accent)}
-    
+
     /* Empty */
     .empty{text-align:center;padding:60px 20px}
     .empty-icon{font-size:48px;margin-bottom:16px}
     .empty h3{font-family:Georgia,serif;font-style:italic;font-size:22px;margin-bottom:8px}
     .empty p{color:var(--text2);font-size:14px}
-    
+
     /* Tabs */
     .tabs{display:flex;background:var(--bg2);border-top:1px solid var(--border);padding:8px 16px;padding-bottom:calc(8px + env(safe-area-inset-bottom))}
     .tab{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px}
     .tab.active{color:var(--accent)}
     .tab-label{font-size:10px;margin-top:4px}
     .tab-panel{display:none;flex-direction:column;height:100%}.tab-panel.active{display:flex}
-    
+
     /* Modal */
     .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;display:none;align-items:flex-end}
     .modal-bg.active{display:flex}
-    .modal{width:100%;max-height:85vh;background:var(--bg2);border-radius:var(--r) var(--r) 0 0;display:flex;flex-direction:column}
+    .modal{width:100%;max-height:90vh;background:var(--bg2);border-radius:var(--r) var(--r) 0 0;display:flex;flex-direction:column}
     .modal-head{display:flex;justify-content:space-between;align-items:center;padding:18px 20px;border-bottom:1px solid var(--border)}
     .modal-title{font-size:17px;font-weight:600}
     .modal-close{width:32px;height:32px;border-radius:50%;background:var(--bg3);border:none;color:var(--text2);font-size:18px;cursor:pointer}
     .modal-body{flex:1;overflow-y:auto;padding:20px}
-    
+
     /* Form */
     .form-group{margin-bottom:18px}
-    .form-label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:8px}
+    .form-label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.04em}
     .form-input{width:100%;padding:12px 14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:16px}
     .form-input:focus{outline:none;border-color:var(--accent)}
     .form-input::placeholder{color:var(--text3)}
     .form-textarea{min-height:80px;resize:vertical}
-    
+
     /* Type selector */
     .types{display:flex;gap:8px}
-    .type-btn{width:50px;height:50px;border-radius:10px;background:var(--bg);border:2px solid var(--border);font-size:22px;cursor:pointer}
-    .type-btn.active{border-color:var(--accent);background:var(--accent)}
-    
+    .type-btn{flex:1;height:54px;border-radius:10px;background:var(--bg);border:2px solid var(--border);font-size:20px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;transition:border-color 0.15s}
+    .type-btn span{font-size:9px;color:var(--text3);font-weight:600;text-transform:uppercase}
+    .type-btn.active.book{border-color:var(--book);background:rgba(34,197,94,0.08)}
+    .type-btn.active.show{border-color:var(--show);background:rgba(139,92,246,0.08)}
+    .type-btn.active.movie{border-color:var(--movie);background:rgba(245,158,11,0.08)}
+    .type-btn.active.game{border-color:var(--game);background:rgba(239,68,68,0.08)}
+    .type-btn.active.podcast{border-color:var(--podcast);background:rgba(251,146,60,0.08)}
+
+    /* Status selector */
+    .status-wrap{display:flex;flex-wrap:wrap;gap:6px}
+    .status-btn{padding:7px 12px;background:var(--bg);border:1px solid var(--border);border-radius:16px;font-size:12px;font-weight:500;cursor:pointer;color:var(--text2)}
+    .status-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+
+    /* Progress row */
+    .progress-row{display:flex;gap:8px;align-items:center}
+    .progress-row .form-input{flex:1}
+    .prog-sep{font-size:13px;color:var(--text3);white-space:nowrap}
+
     /* Search */
     .search-wrap{position:relative}
     .search-results{position:absolute;top:100%;left:0;right:0;background:var(--bg3);border:1px solid var(--border);border-radius:10px;margin-top:4px;max-height:280px;overflow-y:auto;z-index:100;display:none}
@@ -124,16 +157,16 @@
     .search-item-title{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .search-item-meta{font-size:11px;color:var(--text3)}
     .search-loading,.search-empty{padding:20px;text-align:center;color:var(--text3);font-size:13px}
-    
+
     /* Selected media */
     .selected-media{display:flex;gap:14px;padding:14px;background:var(--bg);border-radius:10px;margin-bottom:18px}
-    .selected-media img{width:70px;height:100px;object-fit:cover;border-radius:8px}
+    .selected-media img{width:60px;height:86px;object-fit:cover;border-radius:8px}
     .selected-media-info{flex:1}
-    .selected-media-title{font-size:16px;font-weight:600;margin-bottom:4px}
+    .selected-media-title{font-size:15px;font-weight:600;margin-bottom:4px}
     .selected-media-meta{font-size:12px;color:var(--text2);margin-bottom:2px}
     .selected-media-clear{background:none;border:none;color:var(--accent);font-size:12px;cursor:pointer;padding:0;margin-top:8px}
     .hidden{display:none!important}
-    
+
     /* Genres & Rating */
     .genres{display:flex;flex-wrap:wrap;gap:6px}
     .genre{padding:7px 12px;background:var(--bg);border:1px solid var(--border);border-radius:16px;font-size:12px;cursor:pointer}
@@ -142,7 +175,7 @@
     .star{font-size:26px;cursor:pointer}
     .btn-primary{background:var(--accent);color:#fff}
     .btn-danger{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#fca5a5}
-    
+
     /* AI Modal */
     .ai-modal{position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:1001;display:none;align-items:center;justify-content:center;padding:20px}
     .ai-modal.active{display:flex}
@@ -152,10 +185,11 @@
     .ai-body{flex:1;overflow-y:auto;padding:20px}
     .ai-text{font-size:14px;line-height:1.7}
     .ai-text strong{color:var(--accent)}
-    .ai-foot{padding:14px;border-top:1px solid var(--border);text-align:center;font-size:11px;color:var(--accent)}
+    .ai-foot{padding:14px;border-top:1px solid var(--border);text-align:center;font-size:11px;color:var(--text3)}
     .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin:30px auto}
     @keyframes spin{to{transform:rotate(360deg)}}
-    
+    @media(prefers-reduced-motion:reduce){.spinner,.mini-spinner{animation:none;border-top-color:var(--border)}}
+
     /* Stats */
     .stats{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:14px}
     .stats-title{font-size:15px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px}
@@ -164,7 +198,7 @@
     .bar-track{flex:1;height:20px;background:var(--bg);border-radius:5px;overflow:hidden}
     .bar-fill{height:100%;border-radius:5px}
     .bar-count{width:24px;text-align:right;font-size:12px;color:var(--text2)}
-    
+
     /* Settings */
     .settings-section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:14px;overflow:hidden}
     .settings-head{font-size:11px;font-weight:600;color:var(--text2);padding:14px 18px 10px;text-transform:uppercase}
@@ -183,30 +217,28 @@
     .about-ver{font-size:12px;color:var(--text3);margin-bottom:8px}
     .about-tag{font-size:13px;color:var(--text2);font-style:italic}
     .about-atp{font-size:11px;color:var(--bsky);margin-top:12px}
-    
+
     /* Toast */
     .toast-box{position:fixed;bottom:100px;left:20px;right:20px;z-index:2000;max-width:400px;margin:0 auto}
     .toast{padding:12px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:8px;animation:slideUp 0.3s;box-shadow:0 4px 12px rgba(0,0,0,0.3)}
-    .toast.success{border-color:var(--book);background:rgba(34,197,94,0.15)}
-    .toast.error{border-color:#ef4444;background:rgba(239,68,68,0.15)}
+    .toast.success{border-color:var(--book);background:rgba(34,197,94,0.12)}
+    .toast.error{border-color:#ef4444;background:rgba(239,68,68,0.12)}
     @keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-    
+
     /* Demo banner */
     .demo-banner{background:linear-gradient(90deg,#065f46,#047857);color:#fff;padding:8px 16px;font-size:12px;text-align:center;font-weight:500}
-    
-    /* Desktop responsive */
+
+    /* Desktop */
     @media(min-width:768px){
       .content{padding:20px 32px}
       .entries{max-width:600px;margin:0 auto}
       .header{padding:16px 32px}
       .tabs{padding:12px 32px;padding-bottom:calc(12px + env(safe-area-inset-bottom))}
-      .stats{max-width:600px;margin:0 auto 14px}
-      .settings-section{max-width:600px;margin:0 auto 14px}
-      .about{max-width:600px;margin:0 auto}
+      .stats,.settings-section,.about{max-width:600px;margin-left:auto;margin-right:auto;margin-bottom:14px}
       .card{transition:transform 0.2s,box-shadow 0.2s}
       .card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.3)}
     }
-    
+
     /* Sync indicator */
     .sync-indicator{position:fixed;bottom:80px;right:20px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:8px 14px;font-size:12px;display:none;align-items:center;gap:6px;z-index:999}
     .sync-indicator.active{display:flex}
@@ -215,42 +247,34 @@
 </head>
 <body>
 <div id="app">
+
   <!-- Auth -->
   <div id="auth-screen" class="screen auth active">
     <div class="auth-box">
       <div class="auth-logo">🍞</div>
       <h1>Breadcrumbs</h1>
       <p>Never lose your place again</p>
-      
       <div class="auth-section">
         <h3><span class="bsky-badge">BLUESKY</span> Sign in with AT Protocol</h3>
         <p>Your data stays in your personal data server. You own it.</p>
-        
         <div class="auth-error" id="auth-error"></div>
-        
         <input type="text" id="auth-handle" placeholder="yourhandle.bsky.social">
         <input type="password" id="auth-password" placeholder="App Password">
-        
-        <button class="btn btn-bsky" id="signin-btn">
-          🦋 Sign in with Bluesky
-        </button>
+        <button class="btn btn-bsky" id="signin-btn">🦋 Sign in with Bluesky</button>
       </div>
-      
       <div class="auth-note">
-        <strong>🔐 Security Note:</strong> Use an <a href="https://bsky.app/settings/app-passwords" target="_blank">App Password</a>, not your main password. App passwords can be revoked anytime.
+        <strong>🔐 Security Note:</strong> Use an <a href="https://bsky.app/settings/app-passwords" target="_blank">App Password</a>, not your main password.
         <br><br>
-        <strong>📦 Data Ownership:</strong> Your breadcrumbs are stored in YOUR data repository on the AT Protocol network. If this app disappears, your data doesn't.
+        <strong>📦 Data Ownership:</strong> Your breadcrumbs are stored in YOUR AT Protocol repository.
       </div>
-      
       <button class="btn btn-secondary" id="demo-btn">Try Demo (Local Only)</button>
     </div>
   </div>
 
   <!-- Main -->
   <div id="main-screen" class="screen">
-    <!-- Demo Banner -->
     <div id="demo-banner" class="demo-banner hidden">📦 Demo Mode — data stored locally only</div>
-    
+
     <!-- Timeline -->
     <div id="timeline-panel" class="tab-panel active">
       <div class="header">
@@ -269,7 +293,7 @@
         <div id="empty" class="empty hidden">
           <div class="empty-icon">🔖</div>
           <h3>No breadcrumbs yet</h3>
-          <p>Tap + to log where you left off in a book, show, movie, or game.</p>
+          <p>Tap + to log where you left off in a book, show, movie, game, or podcast.</p>
         </div>
       </div>
     </div>
@@ -303,22 +327,19 @@
             </div>
           </div>
         </div>
-        
         <div class="settings-section">
           <div class="settings-head">Data</div>
           <div class="settings-item" id="export-btn"><span>📥</span><span class="settings-text">Export Data (JSON)</span><span>›</span></div>
           <div class="settings-item" id="refresh-btn"><span>🔄</span><span class="settings-text">Refresh from PDS</span><span>›</span></div>
         </div>
-        
         <div class="settings-section">
           <div class="settings-head">Account</div>
           <div class="settings-item" id="logout-btn"><span>🚪</span><span class="settings-text">Sign Out</span><span>›</span></div>
         </div>
-        
         <div class="about">
           <div class="about-logo">🍞</div>
           <div class="about-name">Breadcrumbs</div>
-          <div class="about-ver">Version 2.0.0</div>
+          <div class="about-ver">Version 2.1.0</div>
           <div class="about-tag">Never lose your place again.</div>
           <div class="about-atp">Powered by AT Protocol 🦋</div>
         </div>
@@ -341,17 +362,20 @@
         <button class="modal-close" id="modal-close">✕</button>
       </div>
       <div class="modal-body">
+
+        <!-- Type -->
         <div class="form-group">
           <div class="form-label">Type</div>
           <div class="types" id="types">
-            <button class="type-btn active" data-t="book">📚</button>
-            <button class="type-btn" data-t="tv">📺</button>
-            <button class="type-btn" data-t="movie">🎬</button>
-            <button class="type-btn" data-t="game">🎮</button>
-            <button class="type-btn" data-t="other">📦</button>
+            <button class="type-btn book active" data-t="book">📚<span>Book</span></button>
+            <button class="type-btn show" data-t="show">📺<span>Show</span></button>
+            <button class="type-btn movie" data-t="movie">🎬<span>Movie</span></button>
+            <button class="type-btn game" data-t="game">🎮<span>Game</span></button>
+            <button class="type-btn podcast" data-t="podcast">🎙️<span>Podcast</span></button>
           </div>
         </div>
-        
+
+        <!-- Selected media preview -->
         <div id="selected-media" class="selected-media hidden">
           <img id="selected-img" src="" alt="">
           <div class="selected-media-info">
@@ -361,7 +385,8 @@
             <button class="selected-media-clear" id="clear-selection">✕ Clear selection</button>
           </div>
         </div>
-        
+
+        <!-- Search -->
         <div class="form-group" id="search-group">
           <div class="form-label">Search</div>
           <div class="search-wrap">
@@ -370,16 +395,64 @@
           </div>
         </div>
 
+        <!-- Title (manual) -->
         <div class="form-group" id="title-group">
           <div class="form-label">Title</div>
           <input class="form-input" id="f-title" placeholder="Title">
         </div>
 
+        <!-- Status -->
         <div class="form-group">
-          <div class="form-label" id="progress-label">Page Number</div>
-          <input class="form-input" id="f-progress" placeholder="e.g., Page 150">
+          <div class="form-label">Status</div>
+          <div class="status-wrap" id="status-btns">
+            <button class="status-btn" data-s="app.breadcrumbs.defs#wantTo">Want to</button>
+            <button class="status-btn active" data-s="app.breadcrumbs.defs#inProgress">In Progress</button>
+            <button class="status-btn" data-s="app.breadcrumbs.defs#completed">Completed</button>
+            <button class="status-btn" data-s="app.breadcrumbs.defs#abandoned">Abandoned</button>
+            <button class="status-btn" data-s="app.breadcrumbs.defs#onHold">On Hold</button>
+          </div>
         </div>
 
+        <!-- Progress (hidden when status = wantTo) -->
+        <div class="form-group" id="progress-group">
+          <div class="form-label">Progress</div>
+
+          <div id="prog-book">
+            <div class="progress-row">
+              <input class="form-input" id="f-curr-page" type="number" min="0" placeholder="Page">
+              <span class="prog-sep">of</span>
+              <input class="form-input" id="f-total-pages" type="number" min="1" placeholder="Total pages">
+            </div>
+          </div>
+
+          <div id="prog-show" class="hidden">
+            <div class="progress-row">
+              <input class="form-input" id="f-season" type="number" min="1" placeholder="Season">
+              <input class="form-input" id="f-episode" type="number" min="1" placeholder="Episode">
+            </div>
+          </div>
+
+          <div id="prog-movie" class="hidden">
+            <p style="font-size:13px;color:var(--text3)">Status carries the progress for films. Nothing else needed.</p>
+          </div>
+
+          <div id="prog-game" class="hidden">
+            <div class="progress-row" style="margin-bottom:8px">
+              <input class="form-input" id="f-playtime" type="number" min="0" placeholder="Hours played">
+              <input class="form-input" id="f-completion" type="number" min="0" max="100" placeholder="% done">
+            </div>
+            <input class="form-input" id="f-narrative" placeholder="Where are you? (optional)" maxlength="128">
+          </div>
+
+          <div id="prog-podcast" class="hidden">
+            <div class="progress-row">
+              <input class="form-input" id="f-ep-num" type="number" min="1" placeholder="Episode">
+              <input class="form-input" id="f-ep-pos" placeholder="Position (1:23:45)">
+            </div>
+          </div>
+        </div>
+
+        <!-- Genre -->
         <div class="form-group">
           <div class="form-label">Genre</div>
           <div class="genres" id="genres">
@@ -395,7 +468,8 @@
           </div>
         </div>
 
-        <div class="form-group">
+        <!-- Rating (shown when completed) -->
+        <div class="form-group" id="rating-group">
           <div class="form-label">Rating</div>
           <div class="stars" id="stars">
             <span class="star" data-r="1">☆</span>
@@ -406,9 +480,10 @@
           </div>
         </div>
 
+        <!-- Notes -->
         <div class="form-group">
           <div class="form-label">Notes</div>
-          <textarea class="form-input form-textarea" id="f-notes" placeholder="What's happening?"></textarea>
+          <textarea class="form-input form-textarea" id="f-notes" placeholder="Thoughts, spoiler-free..."></textarea>
         </div>
 
         <button class="btn btn-primary" id="save-btn">Save Entry</button>
@@ -425,7 +500,7 @@
         <button class="modal-close" id="ai-close">✕</button>
       </div>
       <div class="ai-body" id="ai-body"></div>
-      <div class="ai-foot">⭐ Premium Feature</div>
+      <div class="ai-foot">Catch Me Up · Breadcrumbs</div>
     </div>
   </div>
 
@@ -434,238 +509,265 @@
 </div>
 
 <script>
-// ========== AT PROTOCOL CONFIG ==========
-var ATP_COLLECTION = 'app.breadcrumbs.entry'; // Custom lexicon for breadcrumbs
+// ========== CONFIG ==========
+var ATP_COLLECTIONS = {
+  book:    'app.breadcrumbs.book',
+  show:    'app.breadcrumbs.show',
+  movie:   'app.breadcrumbs.movie',
+  game:    'app.breadcrumbs.game',
+  podcast: 'app.breadcrumbs.podcast'
+};
+var ATP_LEGACY = 'app.breadcrumbs.entry';
 var DEFAULT_PDS = 'https://bsky.social';
 
+var STATUS = {
+  wantTo:     'app.breadcrumbs.defs#wantTo',
+  inProgress: 'app.breadcrumbs.defs#inProgress',
+  completed:  'app.breadcrumbs.defs#completed',
+  abandoned:  'app.breadcrumbs.defs#abandoned',
+  onHold:     'app.breadcrumbs.defs#onHold'
+};
+var STATUS_LABELS = {
+  'app.breadcrumbs.defs#wantTo':     'Want to',
+  'app.breadcrumbs.defs#inProgress': 'In Progress',
+  'app.breadcrumbs.defs#completed':  'Completed',
+  'app.breadcrumbs.defs#abandoned':  'Abandoned',
+  'app.breadcrumbs.defs#onHold':     'On Hold'
+};
+
+var icons  = {book:'📚', show:'📺', movie:'🎬', game:'🎮', podcast:'🎙️'};
+var labels = {book:'Book', show:'TV Show', movie:'Movie', game:'Game', podcast:'Podcast'};
+
 // Session state
-var session = null; // { did, handle, accessJwt, refreshJwt, pds }
-var entries = [];
-var editId = null;
-var editRkey = null;
-var selType = 'book';
-var selGenre = '';
-var selRating = 0;
+var session       = null;
+var entries       = [];
+var editRkey      = null;
+var editCollection = null;
+var selType       = 'book';
+var selGenre      = '';
+var selRating     = 0;
+var selStatus     = STATUS.inProgress;
 var selectedMedia = null;
 var searchTimeout = null;
-var isDemo = false;
-
-var icons = {book:'📚',tv:'📺',movie:'🎬',game:'🎮',other:'📦'};
-var labels = {book:'Book',tv:'TV',movie:'Movie',game:'Game',other:'Other'};
-var progLabels = {book:'Page Number',tv:'Episode & Timecode',movie:'Timecode',game:'Quest/Chapter',other:'Progress'};
-var progPlace = {book:'e.g., Page 150',tv:'e.g., S2 E5 - 23:45',movie:'e.g., 1:23:45',game:'e.g., Act 2 - Quest Name',other:'Where did you leave off?'};
+var isDemo        = false;
 
 var summaries = {
-  'Project Hail Mary':'<strong>Where you left off:</strong><br><br>Dr. Ryland Grace discovered he\'s not alone. He\'s made contact with <strong>Rocky</strong>, an alien from Erid. They\'re working together to save both planets.<br><br>You just discovered how Astrophage reproduces.',
-  'Severance':'<strong>Where you left off:</strong><br><br>You\'re deep in the Lumon mystery. Helly is trying to escape, Mark found a secret map.<br><br>You stopped right before the <strong>waffle party</strong>.',
+  'Project Hail Mary':'<strong>Where you left off:</strong><br><br>Dr. Ryland Grace discovered he\'s not alone — he\'s made contact with <strong>Rocky</strong>, an alien from Erid. They\'re working together to save both planets.<br><br>You just discovered how Astrophage reproduces.',
+  'Severance':'<strong>Where you left off:</strong><br><br>Deep in the Lumon mystery. Helly is trying to escape. Mark found a secret map.<br><br>You stopped right before the <strong>waffle party</strong>.',
   'Oppenheimer':'<strong>Where you left off:</strong><br><br>You just witnessed the <strong>Trinity test</strong>. The Manhattan Project succeeded.',
   "Baldur's Gate 3":'<strong>Where you left off:</strong><br><br>Playing as <strong>Dark Urge</strong> in Act 2. Moonrise Towers. Jaheira joined you.'
 };
 
 function $(id){return document.getElementById(id)}
-function $$(sel){return document.querySelectorAll(sel)}
+function $$(s){return document.querySelectorAll(s)}
 
 // ========== AT PROTOCOL API ==========
 
 async function atpRequest(method, endpoint, body, pds) {
   var url = (pds || session?.pds || DEFAULT_PDS) + '/xrpc/' + endpoint;
   var headers = {'Content-Type': 'application/json'};
-  if (session?.accessJwt) {
-    headers['Authorization'] = 'Bearer ' + session.accessJwt;
-  }
-  
+  if (session?.accessJwt) headers['Authorization'] = 'Bearer ' + session.accessJwt;
   var opts = {method: method, headers: headers};
-  if (body && method !== 'GET') {
-    opts.body = JSON.stringify(body);
-  }
-  
+  if (body && method !== 'GET') opts.body = JSON.stringify(body);
   var res = await fetch(url, opts);
   var data = await res.json();
-  
-  if (!res.ok) {
-    throw new Error(data.message || data.error || 'Request failed');
-  }
+  if (!res.ok) throw new Error(data.message || data.error || 'Request failed');
   return data;
 }
 
 async function atpLogin(handle, password) {
-  // Resolve handle to get PDS
   var pds = DEFAULT_PDS;
-  
-  // Try to resolve the handle's PDS (for custom domains)
-  try {
-    if (!handle.endsWith('.bsky.social')) {
-      var resolved = await fetch(DEFAULT_PDS + '/xrpc/com.atproto.identity.resolveHandle?handle=' + encodeURIComponent(handle));
-      if (resolved.ok) {
-        var rdata = await resolved.json();
-        // Could look up PDS from DID doc, but for now use default
-      }
-    }
-  } catch(e) {}
-  
-  var data = await atpRequest('POST', 'com.atproto.server.createSession', {
-    identifier: handle,
-    password: password
-  }, pds);
-  
-  session = {
-    did: data.did,
-    handle: data.handle,
-    accessJwt: data.accessJwt,
-    refreshJwt: data.refreshJwt,
-    pds: pds
-  };
-  
-  // Save session
+  var data = await atpRequest('POST', 'com.atproto.server.createSession', {identifier: handle, password: password}, pds);
+  session = {did: data.did, handle: data.handle, accessJwt: data.accessJwt, refreshJwt: data.refreshJwt, pds: pds};
   localStorage.setItem('bc_atp_session', JSON.stringify(session));
-  
   return session;
 }
 
 async function atpRefreshSession() {
   if (!session?.refreshJwt) return false;
-  
   try {
-    var data = await atpRequest('POST', 'com.atproto.server.refreshSession', {}, session.pds);
+    var data = await atpRequest('POST', 'com.atproto.server.refreshSession', {});
     session.accessJwt = data.accessJwt;
     session.refreshJwt = data.refreshJwt;
     localStorage.setItem('bc_atp_session', JSON.stringify(session));
     return true;
-  } catch(e) {
-    return false;
-  }
+  } catch(e) { return false; }
 }
 
 async function atpGetEntries() {
   showSync(true);
   try {
-    var data = await atpRequest('GET', 'com.atproto.repo.listRecords?repo=' + encodeURIComponent(session.did) + '&collection=' + ATP_COLLECTION + '&limit=100');
-    
-    entries = (data.records || []).map(function(rec) {
-      return {
-        ...rec.value,
-        rkey: rec.uri.split('/').pop(),
-        uri: rec.uri
-      };
+    var cols = [...Object.values(ATP_COLLECTIONS), ATP_LEGACY];
+    var results = await Promise.allSettled(cols.map(function(col) {
+      return atpRequest('GET', 'com.atproto.repo.listRecords?repo=' + encodeURIComponent(session.did) + '&collection=' + col + '&limit=100')
+        .then(function(d) { return {col: col, records: d.records || []}; });
+    }));
+
+    entries = [];
+    results.forEach(function(r) {
+      if (r.status !== 'fulfilled') return;
+      r.value.records.forEach(function(rec) {
+        entries.push(normalizeRecord(rec, r.value.col));
+      });
     });
-    
-    // Sort by createdAt descending
-    entries.sort(function(a,b) {
-      return new Date(b.createdAt) - new Date(a.createdAt);
+
+    // Deduplicate by URI (legacy + new collections may overlap during migration)
+    var seen = new Set();
+    entries = entries.filter(function(e) {
+      if (seen.has(e.uri)) return false;
+      seen.add(e.uri);
+      return true;
     });
-    
+
+    entries.sort(function(a, b) { return new Date(b.createdAt) - new Date(a.createdAt); });
     showSync(false);
     return entries;
   } catch(e) {
     showSync(false);
-    // Try refresh token
     if (e.message.includes('expired') || e.message.includes('Invalid')) {
-      var refreshed = await atpRefreshSession();
-      if (refreshed) return atpGetEntries();
+      var ok = await atpRefreshSession();
+      if (ok) return atpGetEntries();
     }
     throw e;
   }
 }
 
+function normalizeRecord(rec, collection) {
+  var val = rec.value;
+  var rkey = rec.uri.split('/').pop();
+
+  // Derive type from collection; fall back to legacy type field
+  var type = Object.entries(ATP_COLLECTIONS).find(function(e) { return e[1] === collection; });
+  type = type ? type[0] : (val.type === 'tv' ? 'show' : val.type || 'book');
+
+  // Normalize legacy scalar fields to arrays
+  var authors = val.authors || (val.author ? [val.author] : undefined);
+  var genres  = val.genres  || (val.genre  ? [val.genre]  : undefined);
+
+  // Infer status for legacy records that didn't store it
+  var status = val.status || (val.progress ? STATUS.inProgress : STATUS.wantTo);
+
+  // Legacy string progress stays as-is; structured objects pass through
+  var progress = val.progress || null;
+
+  return Object.assign({}, val, {
+    type: type,
+    authors: authors,
+    genres: genres,
+    status: status,
+    progress: progress,
+    rkey: rkey,
+    uri: rec.uri,
+    collection: collection
+  });
+}
+
+function buildRecord(entry, collection) {
+  var rec = {$type: collection};
+  if (entry.title)            rec.title    = entry.title;
+  if (entry.status)           rec.status   = entry.status;
+  if (entry.notes)            rec.notes    = entry.notes;
+  if (entry.rating)           rec.rating   = entry.rating;
+  if (entry.coverUrl)         rec.coverUrl = entry.coverUrl;
+  if (entry.genres?.length)   rec.genres   = entry.genres;
+  if (entry.progress)         rec.progress = entry.progress;
+  if (entry.identifiers)      rec.identifiers = entry.identifiers;
+  if (entry.startedAt)        rec.startedAt   = entry.startedAt;
+  if (entry.finishedAt)       rec.finishedAt  = entry.finishedAt;
+  if (entry.watchedAt)        rec.watchedAt   = entry.watchedAt;
+  if (entry.type === 'book'    && entry.authors?.length) rec.authors    = entry.authors;
+  if (entry.type === 'game'    && entry.developer)       rec.developer  = entry.developer;
+  if (entry.type === 'podcast' && entry.creator)         rec.creator    = entry.creator;
+  return rec;
+}
+
 async function atpCreateEntry(entry) {
   showSync(true);
   try {
-    var record = {
-      $type: ATP_COLLECTION,
-      type: entry.type,
-      title: entry.title,
-      progress: entry.progress,
-      notes: entry.notes || '',
-      genre: entry.genre || '',
-      rating: entry.rating || 0,
-      cover: entry.cover || '',
-      author: entry.author || '',
-      year: entry.year || '',
-      createdAt: new Date().toISOString()
-    };
-    
+    var collection = ATP_COLLECTIONS[entry.type] || ATP_COLLECTIONS.book;
+    var record = buildRecord(entry, collection);
+    record.createdAt = new Date().toISOString();
     var data = await atpRequest('POST', 'com.atproto.repo.createRecord', {
-      repo: session.did,
-      collection: ATP_COLLECTION,
-      record: record
+      repo: session.did, collection: collection, record: record
     });
-    
     showSync(false);
     return data;
-  } catch(e) {
-    showSync(false);
-    throw e;
-  }
+  } catch(e) { showSync(false); throw e; }
 }
 
-async function atpUpdateEntry(rkey, entry) {
-  // AT Protocol doesn't have update - delete and recreate
+async function atpUpdateEntry(rkey, collection, entry) {
   showSync(true);
   try {
-    await atpDeleteEntry(rkey);
-    await atpCreateEntry(entry);
+    var newCollection = ATP_COLLECTIONS[entry.type] || ATP_COLLECTIONS.book;
+
+    if (collection !== newCollection) {
+      // Type changed — delete from old collection, create in new
+      await atpDeleteEntry(rkey, collection);
+      var created = await atpCreateEntry(entry);
+      showSync(false);
+      return created;
+    }
+
+    // Same collection — putRecord preserves the rkey and AT-URI
+    var record = buildRecord(entry, collection);
+    var original = entries.find(function(e) { return e.rkey === rkey && e.collection === collection; });
+    record.createdAt = (original && original.createdAt) || new Date().toISOString();
+
+    var data = await atpRequest('POST', 'com.atproto.repo.putRecord', {
+      repo: session.did, collection: collection, rkey: rkey, record: record
+    });
     showSync(false);
-  } catch(e) {
-    showSync(false);
-    throw e;
-  }
+    return data;
+  } catch(e) { showSync(false); throw e; }
 }
 
-async function atpDeleteEntry(rkey) {
+async function atpDeleteEntry(rkey, collection) {
   showSync(true);
   try {
     await atpRequest('POST', 'com.atproto.repo.deleteRecord', {
-      repo: session.did,
-      collection: ATP_COLLECTION,
-      rkey: rkey
+      repo: session.did, collection: collection || ATP_LEGACY, rkey: rkey
     });
     showSync(false);
-  } catch(e) {
-    showSync(false);
-    throw e;
-  }
+  } catch(e) { showSync(false); throw e; }
 }
 
-function showSync(show) {
-  $('sync-indicator').classList.toggle('active', show);
-}
+function showSync(show) { $('sync-indicator').classList.toggle('active', show); }
 
 // ========== INIT ==========
 
 function init() {
-  // Event listeners
-  $('demo-btn').onclick = startDemo;
-  $('signin-btn').onclick = signIn;
-  $('add-btn').onclick = openAdd;
+  $('demo-btn').onclick    = startDemo;
+  $('signin-btn').onclick  = signIn;
+  $('add-btn').onclick     = openAdd;
   $('modal-close').onclick = closeModal;
-  $('entry-modal').onclick = function(e){if(e.target.id==='entry-modal')closeModal()};
-  $('save-btn').onclick = saveEntry;
-  $('delete-btn').onclick = deleteEntry;
-  $('ai-close').onclick = closeAI;
-  $('ai-modal').onclick = function(e){if(e.target.id==='ai-modal')closeAI()};
-  $('export-btn').onclick = exportData;
+  $('entry-modal').onclick = function(e){ if(e.target.id==='entry-modal') closeModal(); };
+  $('save-btn').onclick    = saveEntry;
+  $('delete-btn').onclick  = deleteEntry;
+  $('ai-close').onclick    = closeAI;
+  $('ai-modal').onclick    = function(e){ if(e.target.id==='ai-modal') closeAI(); };
+  $('export-btn').onclick  = exportData;
   $('refresh-btn').onclick = refreshEntries;
-  $('logout-btn').onclick = logout;
+  $('logout-btn').onclick  = logout;
   $('clear-selection').onclick = clearSelection;
-  
-  $('f-search').oninput = function(){
+
+  $('f-search').oninput = function() {
     clearTimeout(searchTimeout);
     var q = this.value.trim();
-    if(q.length < 2){$('search-results').classList.remove('active');return}
-    searchTimeout = setTimeout(function(){searchMedia(q)}, 400);
+    if (q.length < 2) { $('search-results').classList.remove('active'); return; }
+    searchTimeout = setTimeout(function(){ searchMedia(q); }, 400);
   };
-  $('f-search').onfocus = function(){if(this.value.length >= 2)$('search-results').classList.add('active')};
-  
-  $$('.tab').forEach(function(t){t.onclick = function(){switchTab(t.dataset.tab)}});
-  $$('.type-btn').forEach(function(b){b.onclick = function(){pickType(b.dataset.t)}});
-  $$('.genre').forEach(function(g){g.onclick = function(){pickGenre(g.dataset.g)}});
-  $$('.star').forEach(function(s){s.onclick = function(){pickRating(+s.dataset.r)}});
-  
-  document.addEventListener('click', function(e){
-    if(!e.target.closest('.search-wrap'))$('search-results').classList.remove('active');
+  $('f-search').onfocus = function() { if (this.value.length >= 2) $('search-results').classList.add('active'); };
+
+  $$('.tab').forEach(function(t){ t.onclick = function(){ switchTab(t.dataset.tab); }; });
+  $$('.type-btn').forEach(function(b){ b.onclick = function(){ pickType(b.dataset.t); }; });
+  $$('.genre').forEach(function(g){ g.onclick = function(){ pickGenre(g.dataset.g); }; });
+  $$('.star').forEach(function(s){ s.onclick = function(){ pickRating(+s.dataset.r); }; });
+  $$('.status-btn').forEach(function(b){ b.onclick = function(){ pickStatus(b.dataset.s); }; });
+
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.search-wrap')) $('search-results').classList.remove('active');
   });
-  
-  // Check for saved session
+
   var savedSession = localStorage.getItem('bc_atp_session');
   if (savedSession) {
     try {
@@ -673,18 +775,11 @@ function init() {
       isDemo = false;
       showMain();
       loadEntries();
-    } catch(e) {
-      localStorage.removeItem('bc_atp_session');
-    }
+    } catch(e) { localStorage.removeItem('bc_atp_session'); }
   }
-  
-  // Check for demo mode
+
   var demoMode = localStorage.getItem('bc_demo_mode');
-  if (demoMode) {
-    isDemo = true;
-    showMain();
-    loadDemoEntries();
-  }
+  if (demoMode) { isDemo = true; showMain(); loadDemoEntries(); }
 }
 
 // ========== AUTH ==========
@@ -693,22 +788,14 @@ async function signIn() {
   var handle = $('auth-handle').value.trim();
   var password = $('auth-password').value;
   var errorEl = $('auth-error');
-  
   if (!handle || !password) {
     errorEl.textContent = 'Please enter your handle and app password';
-    errorEl.classList.add('show');
-    return;
+    errorEl.classList.add('show'); return;
   }
-  
-  // Normalize handle
-  if (!handle.includes('.')) {
-    handle = handle + '.bsky.social';
-  }
-  
+  if (!handle.includes('.')) handle = handle + '.bsky.social';
   errorEl.classList.remove('show');
   $('signin-btn').textContent = 'Signing in...';
   $('signin-btn').disabled = true;
-  
   try {
     await atpLogin(handle, password);
     isDemo = false;
@@ -726,33 +813,27 @@ async function signIn() {
 }
 
 function startDemo() {
-  isDemo = true;
-  session = null;
+  isDemo = true; session = null;
   localStorage.setItem('bc_demo_mode', 'true');
-  showMain();
-  loadDemoEntries();
+  showMain(); loadDemoEntries();
   toast('Welcome to Breadcrumbs!');
 }
 
 function logout() {
-  session = null;
-  isDemo = false;
-  entries = [];
+  session = null; isDemo = false; entries = [];
   localStorage.removeItem('bc_atp_session');
   localStorage.removeItem('bc_demo_mode');
   localStorage.removeItem('bc_demo_entries');
   $('auth-screen').classList.add('active');
   $('main-screen').classList.remove('active');
   $('auth-error').classList.remove('show');
-  $('auth-handle').value = '';
-  $('auth-password').value = '';
+  $('auth-handle').value = ''; $('auth-password').value = '';
   toast('Signed out');
 }
 
 function showMain() {
   $('auth-screen').classList.remove('active');
   $('main-screen').classList.add('active');
-  
   if (session) {
     $('user-handle').textContent = '@' + session.handle;
     $('user-did').textContent = session.did;
@@ -776,11 +857,9 @@ async function loadEntries() {
   $('loading-entries').classList.remove('hidden');
   $('entries').innerHTML = '';
   $('empty').classList.add('hidden');
-  
   try {
     await atpGetEntries();
-    render();
-    updateStats();
+    render(); updateStats();
   } catch(e) {
     toast('Failed to load entries: ' + e.message, 'error');
     render();
@@ -794,239 +873,335 @@ function loadDemoEntries() {
   if (saved) {
     entries = JSON.parse(saved);
   } else {
+    var now = Date.now();
     entries = [
-      {rkey:'1',type:'book',title:'Project Hail Mary',author:'Andy Weir',progress:'Page 284',genre:'Sci-Fi',rating:5,notes:'Rocky is amazing.',cover:'https://covers.openlibrary.org/b/isbn/9780593135204-M.jpg',createdAt:new Date(Date.now()-2*86400000).toISOString()},
-      {rkey:'2',type:'tv',title:'Severance',year:'2022',progress:'S1 E7 - 32:15',genre:'Thriller',rating:5,notes:'Waffle party coming up.',cover:'https://image.tmdb.org/t/p/w200/lFf6LLrQjYZKqiPuqcvzL8Fmgmt.jpg',createdAt:new Date(Date.now()-4*86400000).toISOString()},
-      {rkey:'3',type:'movie',title:'Oppenheimer',year:'2023',progress:'1:45:30',genre:'Drama',rating:4,notes:'Trinity test was incredible.',cover:'https://image.tmdb.org/t/p/w200/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg',createdAt:new Date(Date.now()-6*86400000).toISOString()},
-      {rkey:'4',type:'game',title:"Baldur's Gate 3",year:'2023',progress:'Act 2 - Moonrise',genre:'RPG',rating:5,notes:'Dark Urge playthrough.',cover:'https://media.rawg.io/media/games/699/69907ecf13f172e9e1069ff7a9fd7544.jpg',createdAt:new Date(Date.now()-9*86400000).toISOString()}
+      {rkey:'1',collection:'app.breadcrumbs.book',type:'book',title:'Project Hail Mary',authors:['Andy Weir'],progress:{currentPage:284,totalPages:476,updatedAt:new Date(now-2*86400000).toISOString()},status:STATUS.inProgress,genres:['Sci-Fi'],rating:5,notes:'Rocky is amazing.',coverUrl:'https://covers.openlibrary.org/b/isbn/9780593135204-M.jpg',createdAt:new Date(now-2*86400000).toISOString()},
+      {rkey:'2',collection:'app.breadcrumbs.show',type:'show',title:'Severance',progress:{season:1,episode:7,updatedAt:new Date(now-4*86400000).toISOString()},status:STATUS.inProgress,genres:['Thriller'],rating:5,notes:'Waffle party coming up.',coverUrl:'https://image.tmdb.org/t/p/w200/lFf6LLrQjYZKqiPuqcvzL8Fmgmt.jpg',createdAt:new Date(now-4*86400000).toISOString()},
+      {rkey:'3',collection:'app.breadcrumbs.movie',type:'movie',title:'Oppenheimer',status:STATUS.completed,genres:['Drama'],rating:4,notes:'Trinity test was incredible.',coverUrl:'https://image.tmdb.org/t/p/w200/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg',watchedAt:new Date(now-6*86400000).toISOString(),createdAt:new Date(now-6*86400000).toISOString()},
+      {rkey:'4',collection:'app.breadcrumbs.game',type:'game',title:"Baldur's Gate 3",developer:'Larian Studios',progress:{playtimeMinutes:2520,completionPercent:42,narrativePosition:'Act 2 — Moonrise Towers',updatedAt:new Date(now-9*86400000).toISOString()},status:STATUS.inProgress,genres:['RPG'],rating:5,notes:'Dark Urge playthrough.',coverUrl:'https://media.rawg.io/media/games/699/69907ecf13f172e9e1069ff7a9fd7544.jpg',createdAt:new Date(now-9*86400000).toISOString()}
     ];
     saveDemoEntries();
   }
-  render();
-  updateStats();
+  render(); updateStats();
 }
 
-function saveDemoEntries() {
-  localStorage.setItem('bc_demo_entries', JSON.stringify(entries));
-}
+function saveDemoEntries() { localStorage.setItem('bc_demo_entries', JSON.stringify(entries)); }
 
 async function refreshEntries() {
-  if (isDemo) {
-    toast('Demo mode - no server to refresh from');
-    return;
+  if (isDemo) { toast('Demo mode — no server to refresh from'); return; }
+  await loadEntries(); toast('Refreshed from PDS');
+}
+
+// ========== RENDER ==========
+
+function formatProgress(entry) {
+  var p = entry.progress;
+  if (!p) return null;
+  if (typeof p === 'string') return p; // legacy
+
+  var t = entry.type;
+  if (t === 'book') {
+    if (p.currentPage && p.totalPages) return 'p. ' + p.currentPage + ' / ' + p.totalPages;
+    if (p.currentPage) return 'p. ' + p.currentPage;
+    if (p.positionSeconds) return fmtSecs(p.positionSeconds);
+    if (p.currentChapter) return 'Ch. ' + p.currentChapter + (p.totalChapters ? ' / ' + p.totalChapters : '');
+    return null;
   }
-  await loadEntries();
-  toast('Refreshed from PDS');
+  if (t === 'show') {
+    var parts = [];
+    if (p.season)   parts.push('S' + p.season);
+    if (p.episode)  parts.push('E' + p.episode);
+    return parts.join(' ') || null;
+  }
+  if (t === 'movie') {
+    return p.positionSeconds ? fmtSecs(p.positionSeconds) : null;
+  }
+  if (t === 'game') {
+    var gparts = [];
+    if (p.playtimeMinutes) gparts.push(Math.round(p.playtimeMinutes / 60) + 'h played');
+    if (p.completionPercent) gparts.push(p.completionPercent + '%');
+    if (p.narrativePosition) gparts.push(p.narrativePosition);
+    return gparts.join(' · ') || null;
+  }
+  if (t === 'podcast') {
+    var pparts = [];
+    if (p.episodeNumber) pparts.push('Ep ' + p.episodeNumber);
+    if (p.positionSeconds) pparts.push(fmtSecs(p.positionSeconds));
+    return pparts.join(' · ') || null;
+  }
+  return null;
+}
+
+function fmtSecs(s) {
+  var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  if (h > 0) return h + ':' + String(m).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
+  return m + ':' + String(sec).padStart(2,'0');
+}
+
+function parseSecs(str) {
+  if (!str) return null;
+  var p = str.split(':').map(Number);
+  if (p.length === 2) return p[0] * 60 + p[1];
+  if (p.length === 3) return p[0] * 3600 + p[1] * 60 + p[2];
+  return null;
 }
 
 function render() {
-  var list = $('entries');
-  var empty = $('empty');
-  
-  if (!entries.length) {
-    list.innerHTML = '';
-    empty.classList.remove('hidden');
-    return;
-  }
-  
+  var list = $('entries'), empty = $('empty');
+  if (!entries.length) { list.innerHTML = ''; empty.classList.remove('hidden'); return; }
   empty.classList.add('hidden');
-  
+
   list.innerHTML = entries.map(function(e) {
-    var coverHtml = e.cover
-      ? '<img class="card-cover" src="'+e.cover+'" alt="" onerror="this.style.display=\'none\'">'
-      : '<div class="card-icon '+e.type+'">'+icons[e.type]+'</div>';
-    var subtitle = e.author || e.year || '';
-    
-    return '<div class="card"><div class="card-main">'+coverHtml+'<div class="card-info"><div class="card-meta"><span class="card-type '+e.type+'">'+labels[e.type]+'</span><span class="card-date">'+fmtDate(e.createdAt)+'</span></div><div class="card-title">'+esc(e.title)+'</div>'+(subtitle?'<div class="card-subtitle">'+esc(subtitle)+'</div>':'')+'<div class="card-progress">📍 '+esc(e.progress)+'</div>'+(e.notes?'<div class="card-notes">'+esc(e.notes)+'</div>':'')+'</div></div><div class="card-actions"><button class="card-action" onclick="openEdit(\''+e.rkey+'\')">✏️ Edit</button><button class="card-action accent" onclick="showAI(\''+e.rkey+'\')">✨ Catch me up</button></div></div>';
+    var coverHtml = e.coverUrl || e.cover
+      ? '<img class="card-cover" src="' + (e.coverUrl || e.cover) + '" alt="" onerror="this.style.display=\'none\'">'
+      : '<div class="card-icon ' + e.type + '">' + (icons[e.type] || '📦') + '</div>';
+
+    var subtitle = (e.authors || []).join(', ') || e.creator || e.developer || '';
+    var prog = formatProgress(e);
+    var statusStr = e.status !== STATUS.inProgress ? STATUS_LABELS[e.status] || '' : '';
+
+    return '<div class="card"><div class="card-main">'
+      + '<div class="card-accent ' + e.type + '"></div>'
+      + coverHtml
+      + '<div class="card-info">'
+      + '<div class="card-meta"><span class="card-type ' + e.type + '">' + (labels[e.type] || e.type) + '</span><span class="card-date">' + fmtDate(e.createdAt) + '</span></div>'
+      + '<div class="card-title">' + esc(e.title) + '</div>'
+      + (subtitle ? '<div class="card-subtitle">' + esc(subtitle) + '</div>' : '')
+      + (prog     ? '<div class="card-progress">📍 ' + esc(prog) + '</div>' : '')
+      + (statusStr ? '<div class="card-status">' + esc(statusStr) + '</div>' : '')
+      + (e.notes  ? '<div class="card-notes">' + esc(e.notes) + '</div>' : '')
+      + '</div></div>'
+      + '<div class="card-actions">'
+      + '<button class="card-action" onclick="openEdit(\'' + esc(e.rkey) + '\',\'' + esc(e.collection) + '\')">✏️ Edit</button>'
+      + '<button class="card-action accent" onclick="showAI(\'' + esc(e.rkey) + '\')">✨ Catch me up</button>'
+      + '</div></div>';
   }).join('');
 }
 
 function fmtDate(ts) {
-  var d = new Date(ts);
-  var now = new Date();
+  var d = new Date(ts), now = new Date();
   var diff = Math.floor((now - d) / 86400000);
   if (diff === 0) return 'Today';
   if (diff === 1) return 'Yesterday';
-  if (diff < 7) return diff + ' days ago';
+  if (diff < 7) return diff + 'd ago';
   return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' ' + d.getDate();
 }
 
 function esc(s) {
   if (!s) return '';
-  var d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
+  var d = document.createElement('div'); d.textContent = s; return d.innerHTML;
 }
 
 function switchTab(tab) {
-  $$('.tab').forEach(function(t){t.classList.toggle('active', t.dataset.tab === tab)});
-  $$('.tab-panel').forEach(function(p){p.classList.toggle('active', p.id === tab + '-panel')});
+  $$('.tab').forEach(function(t){ t.classList.toggle('active', t.dataset.tab === tab); });
+  $$('.tab-panel').forEach(function(p){ p.classList.toggle('active', p.id === tab + '-panel'); });
   if (tab === 'analytics') updateStats();
 }
 
 // ========== MODAL ==========
 
 function openAdd() {
-  editId = null;
-  editRkey = null;
-  selectedMedia = null;
+  editRkey = null; editCollection = null; selectedMedia = null;
   $('modal-title').textContent = 'New Entry';
-  $('f-title').value = '';
-  $('f-progress').value = '';
-  $('f-notes').value = '';
-  $('f-search').value = '';
+  $('f-title').value = ''; $('f-notes').value = ''; $('f-search').value = '';
   $('delete-btn').classList.add('hidden');
   $('selected-media').classList.add('hidden');
   $('search-group').classList.remove('hidden');
+  selGenre = ''; selRating = 0;
   pickType('book');
-  selGenre = '';
-  selRating = 0;
-  updateGenres();
-  updateStars();
+  pickStatus(STATUS.inProgress);
+  updateGenres(); updateStars();
   $('entry-modal').classList.add('active');
 }
 
-function openEdit(rkey) {
-  var e = entries.find(function(x){return x.rkey === rkey});
+function openEdit(rkey, collection) {
+  var e = entries.find(function(x){ return x.rkey === rkey && x.collection === collection; });
   if (!e) return;
-  
-  editId = e.rkey;
-  editRkey = e.rkey;
-  selectedMedia = e.cover ? {poster: e.cover, title: e.title, author: e.author, year: e.year} : null;
-  
+
+  editRkey = rkey; editCollection = collection; selectedMedia = null;
   $('modal-title').textContent = 'Edit Entry';
-  $('f-title').value = e.title;
-  $('f-progress').value = e.progress;
-  $('f-notes').value = e.notes || '';
+  $('f-title').value  = e.title || '';
+  $('f-notes').value  = e.notes || '';
   $('f-search').value = '';
   $('delete-btn').classList.remove('hidden');
-  
-  if (e.cover) {
+
+  if (e.coverUrl || e.cover) {
+    var url = e.coverUrl || e.cover;
+    selectedMedia = {title: e.title, coverUrl: url};
     $('selected-media').classList.remove('hidden');
-    $('selected-img').src = e.cover;
+    $('selected-img').src = url;
     $('selected-title').textContent = e.title;
-    $('selected-meta1').textContent = e.author || e.year || '';
+    $('selected-meta1').textContent = (e.authors || []).join(', ') || e.creator || e.developer || '';
     $('selected-meta2').textContent = '';
     $('search-group').classList.add('hidden');
   } else {
     $('selected-media').classList.add('hidden');
     $('search-group').classList.remove('hidden');
   }
-  
-  pickType(e.type);
-  selGenre = e.genre || '';
+
+  selGenre  = (e.genres && e.genres[0]) || '';
   selRating = e.rating || 0;
-  updateGenres();
-  updateStars();
+  pickType(e.type);
+  pickStatus(e.status || STATUS.inProgress);
+  populateProgressFields(e);
+  updateGenres(); updateStars();
   $('entry-modal').classList.add('active');
 }
 
-function closeModal() {
-  $('entry-modal').classList.remove('active');
-}
+function closeModal() { $('entry-modal').classList.remove('active'); }
 
 function pickType(t) {
   selType = t;
-  $$('.type-btn').forEach(function(b){b.classList.toggle('active', b.dataset.t === t)});
-  $('progress-label').textContent = progLabels[t];
-  $('f-progress').placeholder = progPlace[t];
-  $('f-search').value = '';
-  $('search-results').classList.remove('active');
-  if (!editId) clearSelection();
+  $$('.type-btn').forEach(function(b){
+    b.classList.toggle('active', b.dataset.t === t);
+  });
+  // Show correct progress subform
+  ['book','show','movie','game','podcast'].forEach(function(mt) {
+    var el = $('prog-' + mt);
+    if (el) el.classList.toggle('hidden', mt !== t);
+  });
+  if (!editRkey) clearProgressFields();
 }
 
-function pickGenre(g) {selGenre = selGenre === g ? '' : g; updateGenres()}
-function updateGenres() {$$('.genre').forEach(function(el){el.classList.toggle('active', el.dataset.g === selGenre)})}
-function pickRating(r) {selRating = selRating === r ? 0 : r; updateStars()}
-function updateStars() {$$('.star').forEach(function(s){s.textContent = +s.dataset.r <= selRating ? '⭐' : '☆'})}
+function pickStatus(s) {
+  selStatus = s;
+  $$('.status-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.s === s); });
+  // Hide progress when wantTo
+  $('progress-group').classList.toggle('hidden', s === STATUS.wantTo);
+  // Show rating only when completed
+  $('rating-group').classList.toggle('hidden', s !== STATUS.completed);
+}
+
+function pickGenre(g) { selGenre = selGenre === g ? '' : g; updateGenres(); }
+function updateGenres() { $$('.genre').forEach(function(el){ el.classList.toggle('active', el.dataset.g === selGenre); }); }
+function pickRating(r) { selRating = selRating === r ? 0 : r; updateStars(); }
+function updateStars() { $$('.star').forEach(function(s){ s.textContent = +s.dataset.r <= selRating ? '⭐' : '☆'; }); }
+
+function clearProgressFields() {
+  ['f-curr-page','f-total-pages','f-season','f-episode',
+   'f-playtime','f-completion','f-narrative','f-ep-num','f-ep-pos'].forEach(function(id) {
+    var el = $(id); if (el) el.value = '';
+  });
+}
+
+function populateProgressFields(entry) {
+  clearProgressFields();
+  var p = entry.progress;
+  if (!p || typeof p === 'string') return; // legacy string — leave blank
+  var t = entry.type;
+  if (t === 'book') {
+    if ($('f-curr-page'))  $('f-curr-page').value  = p.currentPage  || '';
+    if ($('f-total-pages')) $('f-total-pages').value = p.totalPages || '';
+  } else if (t === 'show') {
+    if ($('f-season'))  $('f-season').value  = p.season  || '';
+    if ($('f-episode')) $('f-episode').value = p.episode || '';
+  } else if (t === 'game') {
+    if ($('f-playtime'))    $('f-playtime').value    = p.playtimeMinutes ? Math.round(p.playtimeMinutes / 60) : '';
+    if ($('f-completion'))  $('f-completion').value  = p.completionPercent || '';
+    if ($('f-narrative'))   $('f-narrative').value   = p.narrativePosition || '';
+  } else if (t === 'podcast') {
+    if ($('f-ep-num')) $('f-ep-num').value = p.episodeNumber || '';
+    if ($('f-ep-pos')) $('f-ep-pos').value = p.positionSeconds ? fmtSecs(p.positionSeconds) : '';
+  }
+}
+
+function buildProgressObject(type) {
+  var now = new Date().toISOString();
+  if (type === 'book') {
+    var cp = parseInt($('f-curr-page').value) || null;
+    var tp = parseInt($('f-total-pages').value) || null;
+    return (cp || tp) ? {currentPage: cp, totalPages: tp, updatedAt: now} : null;
+  }
+  if (type === 'show') {
+    var ep = parseInt($('f-episode').value) || null;
+    if (!ep) return null;
+    var sn = parseInt($('f-season').value) || null;
+    return {season: sn, episode: ep, updatedAt: now};
+  }
+  if (type === 'movie') return null;
+  if (type === 'game') {
+    var pt = parseFloat($('f-playtime').value);
+    var pm = (!isNaN(pt) && pt > 0) ? Math.round(pt * 60) : null;
+    var pc = parseInt($('f-completion').value) || null;
+    var np = $('f-narrative').value.trim() || null;
+    return (pm || pc || np) ? {playtimeMinutes: pm, completionPercent: pc, narrativePosition: np, updatedAt: now} : null;
+  }
+  if (type === 'podcast') {
+    var en = parseInt($('f-ep-num').value) || null;
+    var ps = parseSecs($('f-ep-pos').value.trim()) || null;
+    return (en || ps) ? {episodeNumber: en, positionSeconds: ps, updatedAt: now} : null;
+  }
+  return null;
+}
 
 async function saveEntry() {
   var title = $('f-title').value.trim();
-  var progress = $('f-progress').value.trim();
-  var notes = $('f-notes').value.trim();
-  
-  if (!title || !progress) {
-    toast('Enter title and progress', 'error');
-    return;
-  }
-  
+  if (!title) { toast('Title is required', 'error'); return; }
+
   var entryData = {
-    type: selType,
-    title: title,
-    progress: progress,
-    notes: notes,
-    genre: selGenre,
-    rating: selRating,
-    cover: selectedMedia?.poster || '',
-    author: selectedMedia?.author || '',
-    year: selectedMedia?.year || ''
+    type:     selType,
+    title:    title,
+    status:   selStatus,
+    progress: selStatus !== STATUS.wantTo ? buildProgressObject(selType) : null,
+    notes:    $('f-notes').value.trim() || null,
+    genres:   selGenre ? [selGenre] : null,
+    rating:   selRating || null,
+    coverUrl: selectedMedia?.coverUrl || null,
+    authors:  selectedMedia?.authors || null,
+    creator:  selectedMedia?.creator || null,
+    developer: selectedMedia?.developer || null
   };
-  
-  $('save-btn').textContent = 'Saving...';
-  $('save-btn').disabled = true;
-  
+
+  $('save-btn').textContent = 'Saving...'; $('save-btn').disabled = true;
+
   try {
     if (isDemo) {
-      // Demo mode - local storage
       if (editRkey) {
-        var idx = entries.findIndex(function(e){return e.rkey === editRkey});
-        if (idx >= 0) {
-          entries[idx] = {...entries[idx], ...entryData};
-        }
+        var idx = entries.findIndex(function(e){ return e.rkey === editRkey; });
+        if (idx >= 0) entries[idx] = Object.assign({}, entries[idx], entryData);
       } else {
         entryData.rkey = Date.now().toString();
-        entryData.createdAt = new Date().toISOString();
+        entryData.collection = ATP_COLLECTIONS[selType] || ATP_COLLECTIONS.book;
+        entryData.createdAt  = new Date().toISOString();
         entries.unshift(entryData);
       }
       saveDemoEntries();
       toast(editRkey ? 'Entry updated!' : 'Entry saved!');
     } else {
-      // AT Protocol
-      if (editRkey) {
-        await atpUpdateEntry(editRkey, entryData);
-        toast('Entry updated & synced to PDS!');
+      if (editRkey && editCollection) {
+        await atpUpdateEntry(editRkey, editCollection, entryData);
+        toast('Entry updated!');
       } else {
         await atpCreateEntry(entryData);
         toast('Entry saved to your PDS!');
       }
       await atpGetEntries();
     }
-    
-    render();
-    updateStats();
-    closeModal();
+    render(); updateStats(); closeModal();
   } catch(e) {
     toast('Save failed: ' + e.message, 'error');
   } finally {
-    $('save-btn').textContent = 'Save Entry';
-    $('save-btn').disabled = false;
+    $('save-btn').textContent = 'Save Entry'; $('save-btn').disabled = false;
   }
 }
 
 async function deleteEntry() {
   if (!editRkey) return;
-  
-  $('delete-btn').textContent = 'Deleting...';
-  $('delete-btn').disabled = true;
-  
+  $('delete-btn').textContent = 'Deleting...'; $('delete-btn').disabled = true;
   try {
     if (isDemo) {
-      entries = entries.filter(function(e){return e.rkey !== editRkey});
+      entries = entries.filter(function(e){ return e.rkey !== editRkey; });
       saveDemoEntries();
     } else {
-      await atpDeleteEntry(editRkey);
+      await atpDeleteEntry(editRkey, editCollection);
       await atpGetEntries();
     }
-    
-    render();
-    updateStats();
-    closeModal();
+    render(); updateStats(); closeModal();
     toast('Entry deleted');
   } catch(e) {
     toast('Delete failed: ' + e.message, 'error');
   } finally {
-    $('delete-btn').textContent = '🗑️ Delete';
-    $('delete-btn').disabled = false;
+    $('delete-btn').textContent = '🗑️ Delete'; $('delete-btn').disabled = false;
   }
 }
 
@@ -1036,111 +1211,86 @@ function searchMedia(query) {
   var results = $('search-results');
   results.innerHTML = '<div class="search-loading">Searching...</div>';
   results.classList.add('active');
-  
-  if (selType === 'book') searchBooks(query);
-  else if (selType === 'tv') searchTMDB(query, 'tv');
-  else if (selType === 'movie') searchTMDB(query, 'movie');
-  else if (selType === 'game') searchGames(query);
-  else results.innerHTML = '<div class="search-empty">Manual entry for "Other"</div>';
+  if      (selType === 'book')    searchBooks(query);
+  else if (selType === 'show')    searchTMDB(query, 'tv');
+  else if (selType === 'movie')   searchTMDB(query, 'movie');
+  else if (selType === 'game')    searchGames(query);
+  else results.innerHTML = '<div class="search-empty">Manual entry only for this type.</div>';
 }
 
 function searchTMDB(query, type) {
-  console.log('Searching TMDB for:', query, type);
-  fetch('/api/tmdb?query='+encodeURIComponent(query)+'&type='+type)
-  .then(function(r){
-    console.log('TMDB response status:', r.status);
-    if (!r.ok) throw new Error('TMDB API error: ' + r.status);
-    return r.json();
-  })
-  .then(function(data){
-    console.log('TMDB data:', data);
+  fetch('/api/tmdb?query=' + encodeURIComponent(query) + '&type=' + type)
+  .then(function(r){ if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then(function(data) {
     var results = $('search-results');
-    if (!data.results?.length) {
-      results.innerHTML = '<div class="search-empty">No results found</div>';
-      return;
-    }
-    results.innerHTML = data.results.slice(0,6).map(function(item){
+    if (!data.results?.length) { results.innerHTML = '<div class="search-empty">No results found</div>'; return; }
+    results.innerHTML = data.results.slice(0,6).map(function(item) {
       var title = item.title || item.name;
-      var year = (item.release_date || item.first_air_date || '').slice(0,4);
-      var poster = item.poster_path ? 'https://image.tmdb.org/t/p/w92'+item.poster_path : '';
-      return '<div class="search-item" data-title="'+esc(title)+'" data-year="'+year+'" data-poster="'+(item.poster_path?'https://image.tmdb.org/t/p/w200'+item.poster_path:'')+'">'+(poster?'<img src="'+poster+'">':'<div style="width:45px;height:65px;background:var(--bg);border-radius:6px;display:flex;align-items:center;justify-content:center">'+icons[type]+'</div>')+'<div class="search-item-info"><div class="search-item-title">'+esc(title)+'</div><div class="search-item-meta">'+year+'</div></div></div>';
+      var year  = (item.release_date || item.first_air_date || '').slice(0,4);
+      var poster = item.poster_path ? 'https://image.tmdb.org/t/p/w92' + item.poster_path : '';
+      var cover  = item.poster_path ? 'https://image.tmdb.org/t/p/w200' + item.poster_path : '';
+      return '<div class="search-item" data-title="' + esc(title) + '" data-year="' + year + '" data-cover="' + cover + '">'
+        + (poster ? '<img src="' + poster + '">' : '<div style="width:45px;height:65px;background:var(--bg);border-radius:6px;display:flex;align-items:center;justify-content:center">' + icons[selType] + '</div>')
+        + '<div class="search-item-info"><div class="search-item-title">' + esc(title) + '</div><div class="search-item-meta">' + year + '</div></div></div>';
     }).join('');
-    results.querySelectorAll('.search-item').forEach(function(item){item.onclick=function(){selectResult(this)}});
+    results.querySelectorAll('.search-item').forEach(function(item){ item.onclick = function(){ selectResult(this); }; });
   })
-  .catch(function(e){
-    console.error('TMDB error:', e);
-    $('search-results').innerHTML='<div class="search-empty">Search unavailable. Enter title manually below.</div>';
-  });
+  .catch(function(){ $('search-results').innerHTML = '<div class="search-empty">Search unavailable. Enter title manually.</div>'; });
 }
 
 function searchBooks(query) {
-  console.log('Searching Books for:', query);
-  fetch('https://www.googleapis.com/books/v1/volumes?q='+encodeURIComponent(query)+'&maxResults=6')
-  .then(function(r){
-    console.log('Books response status:', r.status);
-    if (!r.ok) throw new Error('Books API error: ' + r.status);
-    return r.json();
-  })
-  .then(function(data){
-    console.log('Books data:', data);
+  fetch('https://www.googleapis.com/books/v1/volumes?q=' + encodeURIComponent(query) + '&maxResults=6')
+  .then(function(r){ if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then(function(data) {
     var results = $('search-results');
-    if (!data.items?.length) {
-      results.innerHTML = '<div class="search-empty">No results found</div>';
-      return;
-    }
-    results.innerHTML = data.items.map(function(item){
+    if (!data.items?.length) { results.innerHTML = '<div class="search-empty">No results found</div>'; return; }
+    results.innerHTML = data.items.map(function(item) {
       var v = item.volumeInfo;
-      var title = v.title || 'Unknown';
+      var title  = v.title || 'Unknown';
       var author = (v.authors || []).join(', ') || '';
-      var cover = v.imageLinks?.smallThumbnail || '';
-      return '<div class="search-item" data-title="'+esc(title)+'" data-author="'+esc(author)+'" data-poster="'+esc(cover)+'">'+(cover?'<img src="'+cover+'">':'<div style="width:45px;height:65px;background:var(--bg);border-radius:6px;display:flex;align-items:center;justify-content:center">📚</div>')+'<div class="search-item-info"><div class="search-item-title">'+esc(title)+'</div><div class="search-item-meta">'+esc(author)+'</div></div></div>';
+      var cover  = v.imageLinks?.thumbnail || v.imageLinks?.smallThumbnail || '';
+      var thumb  = v.imageLinks?.smallThumbnail || '';
+      var isbn   = (v.industryIdentifiers || []).find(function(x){ return x.type === 'ISBN_13'; });
+      return '<div class="search-item" data-title="' + esc(title) + '" data-author="' + esc(author) + '" data-cover="' + esc(cover) + '" data-isbn13="' + (isbn ? isbn.identifier : '') + '">'
+        + (thumb ? '<img src="' + thumb + '">' : '<div style="width:45px;height:65px;background:var(--bg);border-radius:6px;display:flex;align-items:center;justify-content:center">📚</div>')
+        + '<div class="search-item-info"><div class="search-item-title">' + esc(title) + '</div><div class="search-item-meta">' + esc(author) + '</div></div></div>';
     }).join('');
-    results.querySelectorAll('.search-item').forEach(function(item){item.onclick=function(){selectResult(this)}});
+    results.querySelectorAll('.search-item').forEach(function(item){ item.onclick = function(){ selectResult(this); }; });
   })
-  .catch(function(e){
-    console.error('Books error:', e);
-    $('search-results').innerHTML='<div class="search-empty">Search unavailable. Enter title manually below.</div>';
-  });
+  .catch(function(){ $('search-results').innerHTML = '<div class="search-empty">Search unavailable. Enter title manually.</div>'; });
 }
 
 function searchGames(query) {
-  console.log('Searching Games for:', query);
-  fetch('/api/rawg?query='+encodeURIComponent(query))
-  .then(function(r){
-    console.log('Games response status:', r.status);
-    if (!r.ok) throw new Error('Games API error: ' + r.status);
-    return r.json();
-  })
-  .then(function(data){
-    console.log('Games data:', data);
+  fetch('/api/rawg?query=' + encodeURIComponent(query))
+  .then(function(r){ if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then(function(data) {
     var results = $('search-results');
-    if (!data.results?.length) {
-      results.innerHTML = '<div class="search-empty">No results found</div>';
-      return;
-    }
-    results.innerHTML = data.results.map(function(item){
+    if (!data.results?.length) { results.innerHTML = '<div class="search-empty">No results found</div>'; return; }
+    results.innerHTML = data.results.map(function(item) {
       var year = (item.released || '').slice(0,4);
-      return '<div class="search-item" data-title="'+esc(item.name)+'" data-year="'+year+'" data-poster="'+esc(item.background_image || '')+'">'+(item.background_image?'<img src="'+item.background_image+'">':'<div style="width:45px;height:65px;background:var(--bg);border-radius:6px;display:flex;align-items:center;justify-content:center">🎮</div>')+'<div class="search-item-info"><div class="search-item-title">'+esc(item.name)+'</div><div class="search-item-meta">'+year+'</div></div></div>';
+      return '<div class="search-item" data-title="' + esc(item.name) + '" data-year="' + year + '" data-cover="' + esc(item.background_image || '') + '">'
+        + (item.background_image ? '<img src="' + item.background_image + '">' : '<div style="width:45px;height:65px;background:var(--bg);border-radius:6px;display:flex;align-items:center;justify-content:center">🎮</div>')
+        + '<div class="search-item-info"><div class="search-item-title">' + esc(item.name) + '</div><div class="search-item-meta">' + year + '</div></div></div>';
     }).join('');
-    results.querySelectorAll('.search-item').forEach(function(item){item.onclick=function(){selectResult(this)}});
+    results.querySelectorAll('.search-item').forEach(function(item){ item.onclick = function(){ selectResult(this); }; });
   })
-  .catch(function(e){
-    console.error('Games error:', e);
-    $('search-results').innerHTML='<div class="search-empty">Search unavailable. Enter title manually below.</div>';
-  });
+  .catch(function(){ $('search-results').innerHTML = '<div class="search-empty">Search unavailable. Enter title manually.</div>'; });
 }
 
 function selectResult(el) {
   var d = el.dataset;
-  selectedMedia = {title: d.title, poster: d.poster || '', author: d.author || '', year: d.year || ''};
-  
+  selectedMedia = {
+    title:    d.title   || '',
+    coverUrl: d.cover   || '',
+    authors:  d.author  ? [d.author] : null,
+    isbn13:   d.isbn13  || null
+  };
   $('selected-media').classList.remove('hidden');
-  $('selected-img').src = selectedMedia.poster;
-  $('selected-img').style.display = selectedMedia.poster ? 'block' : 'none';
+  $('selected-img').src = selectedMedia.coverUrl;
+  $('selected-img').style.display = selectedMedia.coverUrl ? 'block' : 'none';
   $('selected-title').textContent = selectedMedia.title;
-  $('selected-meta1').textContent = selectedMedia.author || selectedMedia.year;
+  $('selected-meta1').textContent = d.author || d.year || '';
   $('selected-meta2').textContent = '';
-  
   $('f-title').value = selectedMedia.title;
   $('f-search').value = '';
   $('search-results').classList.remove('active');
@@ -1151,63 +1301,66 @@ function clearSelection() {
   selectedMedia = null;
   $('selected-media').classList.add('hidden');
   $('search-group').classList.remove('hidden');
-  $('f-title').value = '';
-  $('f-search').value = '';
+  $('f-title').value = ''; $('f-search').value = '';
 }
 
 // ========== AI ==========
 
 function showAI(rkey) {
-  var e = entries.find(function(x){return x.rkey === rkey});
+  var e = entries.find(function(x){ return x.rkey === rkey; });
   if (!e) return;
-  
   $('ai-title').textContent = e.title;
   $('ai-body').innerHTML = '<div class="spinner"></div><p style="text-align:center;color:var(--text2)">Generating summary...</p>';
   $('ai-modal').classList.add('active');
-  
-  setTimeout(function(){
-    var sum = summaries[e.title] || '<strong>Where you left off in '+esc(e.title)+':</strong><br><br>You\'re at <strong>'+esc(e.progress)+'</strong>.'+(e.notes?'<br><br>Your notes: "'+esc(e.notes)+'"':'')+'<br><br>This is a demo. Premium would give you a detailed, spoiler-free recap.';
-    $('ai-body').innerHTML = '<div class="ai-text">'+sum+'</div>';
+  setTimeout(function() {
+    var prog = formatProgress(e);
+    var fallback = '<strong>Where you left off in ' + esc(e.title) + ':</strong><br><br>'
+      + (prog ? 'You\'re at <strong>' + esc(prog) + '</strong>.<br><br>' : '')
+      + (e.notes ? 'Your notes: "' + esc(e.notes) + '"<br><br>' : '')
+      + 'This is a demo. A connected AI endpoint would give you a detailed, spoiler-free recap.';
+    $('ai-body').innerHTML = '<div class="ai-text">' + (summaries[e.title] || fallback) + '</div>';
   }, 1200);
 }
 
-function closeAI() {$('ai-modal').classList.remove('active')}
+function closeAI() { $('ai-modal').classList.remove('active'); }
 
 // ========== STATS ==========
 
 function updateStats() {
   $('total-count').textContent = entries.length + ' Entries';
-  
-  var counts = {book:0, tv:0, movie:0, game:0, other:0};
+  var counts = {book:0, show:0, movie:0, game:0, podcast:0};
   var genreCounts = {};
-  entries.forEach(function(e){
-    counts[e.type]++;
-    if (e.genre) genreCounts[e.genre] = (genreCounts[e.genre] || 0) + 1;
+  entries.forEach(function(e) {
+    if (counts.hasOwnProperty(e.type)) counts[e.type]++;
+    var g = (e.genres && e.genres[0]) || e.genre || '';
+    if (g) genreCounts[g] = (genreCounts[g] || 0) + 1;
   });
-  
-  var max = Math.max(counts.book, counts.tv, counts.movie, counts.game, counts.other, 1);
+  var max = Math.max.apply(null, Object.values(counts).concat([1]));
   var html = '';
-  ['book','tv','movie','game','other'].forEach(function(t){
-    if (counts[t] > 0) {
-      html += '<div class="bar-row"><span class="bar-label">'+labels[t]+'</span><div class="bar-track"><div class="bar-fill" style="width:'+(counts[t]/max*100)+'%;background:var(--'+t+')"></div></div><span class="bar-count">'+counts[t]+'</span></div>';
+  Object.entries(counts).forEach(function(kv) {
+    if (kv[1] > 0) {
+      html += '<div class="bar-row"><span class="bar-label">' + labels[kv[0]] + '</span>'
+        + '<div class="bar-track"><div class="bar-fill" style="width:' + (kv[1]/max*100) + '%;background:var(--' + kv[0] + ')"></div></div>'
+        + '<span class="bar-count">' + kv[1] + '</span></div>';
     }
   });
-  $('chart').innerHTML = html || '<p style="text-align:center;color:var(--text3)">No data</p>';
-  
-  var genreArr = Object.entries(genreCounts).sort(function(a,b){return b[1]-a[1]});
+  $('chart').innerHTML = html || '<p style="text-align:center;color:var(--text3)">No data yet</p>';
+
+  var genreArr = Object.entries(genreCounts).sort(function(a,b){ return b[1]-a[1]; });
   var gmax = genreArr.length ? genreArr[0][1] : 1;
-  var ghtml = '';
-  genreArr.slice(0,5).forEach(function(g){
-    ghtml += '<div class="bar-row"><span class="bar-label">'+g[0]+'</span><div class="bar-track"><div class="bar-fill" style="width:'+(g[1]/gmax*100)+'%;background:var(--accent)"></div></div><span class="bar-count">'+g[1]+'</span></div>';
-  });
+  var ghtml = genreArr.slice(0,5).map(function(g) {
+    return '<div class="bar-row"><span class="bar-label">' + esc(g[0]) + '</span>'
+      + '<div class="bar-track"><div class="bar-fill" style="width:' + (g[1]/gmax*100) + '%;background:var(--accent)"></div></div>'
+      + '<span class="bar-count">' + g[1] + '</span></div>';
+  }).join('');
   $('genre-chart').innerHTML = ghtml || '<p style="text-align:center;color:var(--text3)">No genre data</p>';
 }
 
 function exportData() {
-  var blob = new Blob([JSON.stringify({entries: entries, exported: new Date().toISOString(), source: isDemo ? 'demo' : 'atp:'+session?.did}, null, 2)], {type: 'application/json'});
+  var blob = new Blob([JSON.stringify({entries: entries, exported: new Date().toISOString(), source: isDemo ? 'demo' : 'atp:' + session?.did}, null, 2)], {type: 'application/json'});
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'breadcrumbs-'+new Date().toISOString().split('T')[0]+'.json';
+  a.download = 'breadcrumbs-' + new Date().toISOString().split('T')[0] + '.json';
   a.click();
   toast('Data exported!');
 }
@@ -1217,7 +1370,7 @@ function toast(msg, type) {
   t.className = 'toast ' + (type || 'success');
   t.textContent = msg;
   $('toasts').appendChild(t);
-  setTimeout(function(){t.remove()}, 3000);
+  setTimeout(function(){ t.remove(); }, 3000);
 }
 
 document.addEventListener('DOMContentLoaded', init);

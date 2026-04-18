@@ -1,0 +1,165 @@
+{
+  "lexicon": 1,
+  "id": "app.breadcrumbs.defs",
+  "defs": {
+    "wantTo": {
+      "type": "token",
+      "description": "The user wants to read, watch, or play this item."
+    },
+    "inProgress": {
+      "type": "token",
+      "description": "The user is currently reading, watching, or playing this item."
+    },
+    "completed": {
+      "type": "token",
+      "description": "The user has finished this item."
+    },
+    "abandoned": {
+      "type": "token",
+      "description": "The user stopped this item with no plan to return."
+    },
+    "onHold": {
+      "type": "token",
+      "description": "The user has paused this item and intends to return."
+    },
+
+    "bookProgress": {
+      "type": "object",
+      "description": "Reading or listening progress for a book. Use page fields for print/ebook; use seconds fields for audiobooks.",
+      "required": ["updatedAt"],
+      "properties": {
+        "currentPage":     { "type": "integer", "minimum": 0 },
+        "totalPages":      { "type": "integer", "minimum": 1 },
+        "currentChapter":  { "type": "integer", "minimum": 0 },
+        "totalChapters":   { "type": "integer", "minimum": 1 },
+        "positionSeconds": { "type": "integer", "minimum": 0, "description": "Playback position for audiobooks." },
+        "totalSeconds":    { "type": "integer", "minimum": 1, "description": "Total duration for audiobooks." },
+        "updatedAt":       { "type": "string", "format": "datetime" }
+      }
+    },
+
+    "showProgress": {
+      "type": "object",
+      "description": "Viewing progress for a TV show or series.",
+      "required": ["episode", "updatedAt"],
+      "properties": {
+        "season":          { "type": "integer", "minimum": 1, "description": "Omit for limited series or shows without seasons." },
+        "episode":         { "type": "integer", "minimum": 1 },
+        "positionSeconds": { "type": "integer", "minimum": 0, "description": "Position within the current episode." },
+        "totalEpisodes":   { "type": "integer", "minimum": 1, "description": "Total episode count; used for completion percentage." },
+        "updatedAt":       { "type": "string", "format": "datetime" }
+      }
+    },
+
+    "movieProgress": {
+      "type": "object",
+      "description": "Viewing progress for a film. Status carries most of the semantic weight; this object records a mid-film save point.",
+      "required": ["updatedAt"],
+      "properties": {
+        "positionSeconds": { "type": "integer", "minimum": 0, "description": "Mid-film save point. Omit when completed." },
+        "totalSeconds":    { "type": "integer", "minimum": 1 },
+        "updatedAt":       { "type": "string", "format": "datetime" }
+      }
+    },
+
+    "gameProgress": {
+      "type": "object",
+      "description": "Play progress for a game.",
+      "required": ["updatedAt"],
+      "properties": {
+        "playtimeMinutes":   { "type": "integer", "minimum": 0 },
+        "completionPercent": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "narrativePosition": { "type": "string",  "maxLength": 128, "description": "Free-text marker e.g. 'Act 2', 'Postgame'. Not structured; no per-game ontology is assumed." },
+        "updatedAt":         { "type": "string", "format": "datetime" }
+      }
+    },
+
+    "podcastProgress": {
+      "type": "object",
+      "description": "Listening progress for a podcast episode.",
+      "required": ["updatedAt"],
+      "properties": {
+        "episodeTitle":    { "type": "string",  "maxLength": 256 },
+        "episodeNumber":   { "type": "integer", "minimum": 1 },
+        "seasonNumber":    { "type": "integer", "minimum": 1 },
+        "positionSeconds": { "type": "integer", "minimum": 0 },
+        "totalSeconds":    { "type": "integer", "minimum": 1 },
+        "updatedAt":       { "type": "string", "format": "datetime" }
+      }
+    },
+
+    "bookIdentifiers": {
+      "type": "object",
+      "description": "External catalog identifiers for a book.",
+      "properties": {
+        "isbn13":        { "type": "string", "maxLength": 13 },
+        "isbn10":        { "type": "string", "maxLength": 10 },
+        "googleBooksId": { "type": "string", "maxLength": 64 },
+        "openLibraryId": { "type": "string", "maxLength": 64 },
+        "goodreadsId":   { "type": "string", "maxLength": 64 }
+      }
+    },
+
+    "showIdentifiers": {
+      "type": "object",
+      "description": "External catalog identifiers for a TV show.",
+      "properties": {
+        "tmdbId": { "type": "string", "maxLength": 64 },
+        "tvdbId": { "type": "string", "maxLength": 64 },
+        "imdbId": { "type": "string", "maxLength": 16 }
+      }
+    },
+
+    "movieIdentifiers": {
+      "type": "object",
+      "description": "External catalog identifiers for a film.",
+      "properties": {
+        "tmdbId": { "type": "string", "maxLength": 64 },
+        "imdbId": { "type": "string", "maxLength": 16 }
+      }
+    },
+
+    "gameIdentifiers": {
+      "type": "object",
+      "description": "External catalog identifiers for a game.",
+      "properties": {
+        "rawgId":     { "type": "string", "maxLength": 64 },
+        "igdbId":     { "type": "string", "maxLength": 64 },
+        "steamAppId": { "type": "string", "maxLength": 32 }
+      }
+    },
+
+    "podcastIdentifiers": {
+      "type": "object",
+      "description": "External catalog identifiers for a podcast.",
+      "properties": {
+        "podcastIndexId":  { "type": "string", "maxLength": 64 },
+        "spotifyId":       { "type": "string", "maxLength": 64 },
+        "applePodcastsId": { "type": "string", "maxLength": 64 }
+      }
+    },
+
+    "preferences": {
+      "type": "object",
+      "description": "User display preferences stored on the PDS so alternate UIs can respect them.",
+      "properties": {
+        "reducedMotion": { "type": "boolean" },
+        "mutedPalette":  { "type": "boolean" },
+        "defaultView": {
+          "type": "string",
+          "knownValues": ["timeline", "grid", "list"]
+        }
+      }
+    },
+
+    "listItem": {
+      "type": "object",
+      "description": "A single entry in a curated list.",
+      "required": ["subject", "addedAt"],
+      "properties": {
+        "subject": { "type": "ref", "ref": "com.atproto.repo.strongRef" },
+        "addedAt": { "type": "string", "format": "datetime" }
+      }
+    }
+  }
+}
