@@ -1,0 +1,32 @@
+{
+  "lexicon": 1,
+  "id": "app.breadcrumbs.profile",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "App-specific profile for a Breadcrumbs user. Supplements app.bsky.actor.profile — does not duplicate name or avatar.",
+      "key": "literal:self",
+      "record": {
+        "type": "object",
+        "required": ["createdAt"],
+        "properties": {
+          "bio": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "A media-focused bio, distinct from the user's Bluesky bio."
+          },
+          "preferences": {
+            "type": "ref",
+            "ref": "app.breadcrumbs.defs#preferences"
+          },
+          "pinnedList": {
+            "type": "ref",
+            "ref": "com.atproto.repo.strongRef",
+            "description": "One featured list shown on the user's Breadcrumbs profile."
+          },
+          "createdAt": { "type": "string", "format": "datetime" }
+        }
+      }
+    }
+  }
+}

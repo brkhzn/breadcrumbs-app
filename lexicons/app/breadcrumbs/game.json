@@ -1,0 +1,72 @@
+{
+  "lexicon": 1,
+  "id": "app.breadcrumbs.game",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "A game in the user's Breadcrumbs library.",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": ["title", "status", "createdAt"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 512
+          },
+          "developer": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "platforms": {
+            "type": "array",
+            "items": { "type": "string", "maxLength": 64 },
+            "maxLength": 10,
+            "description": "Platforms the user played on e.g. 'PC', 'PlayStation 5'."
+          },
+          "status": {
+            "type": "string",
+            "knownValues": [
+              "app.breadcrumbs.defs#wantTo",
+              "app.breadcrumbs.defs#inProgress",
+              "app.breadcrumbs.defs#completed",
+              "app.breadcrumbs.defs#abandoned",
+              "app.breadcrumbs.defs#onHold"
+            ]
+          },
+          "progress": {
+            "type": "ref",
+            "ref": "app.breadcrumbs.defs#gameProgress"
+          },
+          "rating": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10,
+            "description": "User rating on a 1–10 scale."
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 3000
+          },
+          "cover": {
+            "type": "blob",
+            "accept": ["image/jpeg", "image/png", "image/webp"],
+            "maxSize": 1000000
+          },
+          "genres": {
+            "type": "array",
+            "items": { "type": "string", "maxLength": 64 },
+            "maxLength": 10
+          },
+          "identifiers": {
+            "type": "ref",
+            "ref": "app.breadcrumbs.defs#gameIdentifiers"
+          },
+          "startedAt":  { "type": "string", "format": "datetime" },
+          "finishedAt": { "type": "string", "format": "datetime" },
+          "createdAt":  { "type": "string", "format": "datetime" }
+        }
+      }
+    }
+  }
+}

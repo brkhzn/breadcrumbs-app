@@ -1,0 +1,40 @@
+{
+  "lexicon": 1,
+  "id": "app.breadcrumbs.recap",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "A cached AI-generated summary (Catch Me Up) for a single entry. The subject strongRef pins the exact entry version; clients can detect staleness by comparing the CID.",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": ["subject", "content", "generatedAt"],
+        "properties": {
+          "subject": {
+            "type": "ref",
+            "ref": "com.atproto.repo.strongRef",
+            "description": "The entry record this recap summarises, pinned by CID."
+          },
+          "content": {
+            "type": "string",
+            "maxLength": 5000
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "datetime"
+          },
+          "model": {
+            "type": "string",
+            "maxLength": 128,
+            "description": "The model that generated this recap e.g. 'claude-sonnet-4-6'."
+          },
+          "lang": {
+            "type": "string",
+            "format": "language",
+            "description": "BCP-47 language tag of the recap content."
+          }
+        }
+      }
+    }
+  }
+}

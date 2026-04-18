@@ -1,0 +1,31 @@
+{
+  "lexicon": 1,
+  "id": "app.breadcrumbs.list",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "A user-curated list of Breadcrumbs entries across any media type.",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": ["name", "items", "createdAt"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 128
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "items": {
+            "type": "array",
+            "items": { "type": "ref", "ref": "app.breadcrumbs.defs#listItem" },
+            "maxLength": 1000
+          },
+          "createdAt": { "type": "string", "format": "datetime" }
+        }
+      }
+    }
+  }
+}
