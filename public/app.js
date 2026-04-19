@@ -31,6 +31,14 @@ var STATUS_LABELS = {
 var LABELS = { book:'Book', show:'Show', movie:'Film', game:'Game', podcast:'Podcast' };
 var DOT_COLORS = { book:'#5F6B43', show:'#6B4E71', movie:'#B08848', game:'#A45A3C', podcast:'#4F706D' };
 
+// Palettes ordered darkest → lightest characteristic tone
+var PALETTES = [
+  { id:'forest', name:'Forest', light:{bg:'#EEF2EC',fg:'#1A2C20'}, dark:{bg:'#0D1410',fg:'#C8DEC4'}, accent:'#2D6B45' },
+  { id:'ember',  name:'Ember',  light:{bg:'#F5EEE0',fg:'#2C1E0E'}, dark:{bg:'#1A1510',fg:'#E8D5B5'}, accent:'#B06820' },
+  { id:'ocean',  name:'Ocean',  light:{bg:'#EBF0F5',fg:'#1A2535'}, dark:{bg:'#0C1118',fg:'#C0D4E8'}, accent:'#2C5F8A' },
+  { id:'ink',    name:'Ink',    light:{bg:'#F5EFE2',fg:'#2A2520'}, dark:{bg:'#14110C',fg:'#F1E8D5'}, accent:'#8A3B3B' },
+];
+
 // Fallback CSS-gradient covers (used when no coverUrl)
 var COVER_BG = {
   book:    'linear-gradient(160deg,#5F6B43,#3E4A27)',
@@ -54,6 +62,12 @@ var selectedMedia  = null;
 var searchTimeout  = null;
 var isDemo         = false;
 var filterType     = 'all';
+
+var filterStatuses = ['app.breadcrumbs.defs#inProgress'];
+
+var themePalette = 'ink';
+var themeMode    = 'system';
+var _darkMQ      = window.matchMedia('(prefers-color-scheme: dark)');
 
 var lists          = [];
 var editListRkey   = null;
@@ -116,22 +130,45 @@ var SVG_LOGOMARK = '<svg viewBox="0 0 64 64" width="28" height="28" aria-hidden=
 var SVG_ATP = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 11L8 5l2.5 6M6.5 9h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
 
 // ── Theme ────────────────────────────────────────────────────
-function applyTheme(t) {
-  document.documentElement.setAttribute('data-theme', t);
-  localStorage.setItem('bc_theme', t);
+function applyPalette(p) {
+  themePalette = p;
+  document.documentElement.setAttribute('data-palette', p);
+  localStorage.setItem('bc_palette', p);
+  renderSettings();
+}
+
+function _syncSystemMode() {
+  if (themeMode === 'system') {
+    document.documentElement.setAttribute('data-mode', _darkMQ.matches ? 'dark' : 'light');
+  }
+}
+
+function applyMode(m) {
+  themeMode = m;
+  localStorage.setItem('bc_mode', m);
+  if (m === 'system') {
+    _darkMQ.addEventListener('change', _syncSystemMode);
+    _syncSystemMode();
+  } else {
+    _darkMQ.removeEventListener('change', _syncSystemMode);
+    document.documentElement.setAttribute('data-mode', m);
+  }
+  renderSettings();
 }
 
 function detectTheme() {
-  var saved = localStorage.getItem('bc_theme');
-  if (saved) { applyTheme(saved); return; }
-  if (window.matchMedia('(prefers-color-scheme: dark)').matches) applyTheme('night');
-}
-
-function toggleTheme() {
-  var current = document.documentElement.getAttribute('data-theme');
-  applyTheme(current === 'night' ? 'day' : 'night');
-  var lbl = $('theme-label');
-  if (lbl) lbl.textContent = document.documentElement.getAttribute('data-theme') === 'night' ? 'Night library' : 'Parchment';
+  var legacy = localStorage.getItem('bc_theme');
+  if (legacy) {
+    var legacyModeMap = { night:'dark', forest:'dark', sepia:'dark', slate:'light', dusk:'light', day:'light' };
+    var legacyPaletteMap = { night:'ink', forest:'forest', sepia:'ember', slate:'ink', dusk:'ink', day:'ink' };
+    localStorage.setItem('bc_mode', legacyModeMap[legacy] || 'system');
+    localStorage.setItem('bc_palette', legacyPaletteMap[legacy] || 'ink');
+    localStorage.removeItem('bc_theme');
+  }
+  var savedPalette = localStorage.getItem('bc_palette') || 'ink';
+  var savedMode    = localStorage.getItem('bc_mode')    || 'system';
+  applyPalette(savedPalette);
+  applyMode(savedMode);
 }
 
 // ── AT Protocol ──────────────────────────────────────────────
@@ -390,6 +427,11 @@ function init() {
   // Filter chips
   $$('.bc-filter').forEach(function(b) {
     b.onclick = function() { setFilter(b.dataset.f); };
+  });
+
+  // Status filter chips
+  $$('.bc-sfilter').forEach(function(b) {
+    b.onclick = function() { setStatusFilter(b.dataset.sf); };
   });
 
   // List buttons
@@ -862,6 +904,12 @@ function render() {
     ? entries
     : entries.filter(function(e) { return e.type === filterType; });
 
+  if (filterStatuses.length > 0) {
+    shown = shown.filter(function(e) {
+      return filterStatuses.indexOf(e.status || STATUS.inProgress) !== -1;
+    });
+  }
+
   var list  = $('entries');
   var empty = $('empty');
 
@@ -958,6 +1006,19 @@ function setFilter(f) {
   render();
 }
 
+function setStatusFilter(s) {
+  var idx = filterStatuses.indexOf(s);
+  if (idx === -1) {
+    filterStatuses.push(s);
+  } else if (filterStatuses.length > 1) {
+    filterStatuses.splice(idx, 1);
+  }
+  $$('.bc-sfilter').forEach(function(b) {
+    b.classList.toggle('is-active', filterStatuses.indexOf(b.dataset.sf) !== -1);
+  });
+  render();
+}
+
 // ── Tab switching ─────────────────────────────────────────────
 function switchTab(tab) {
   window.scrollTo(0, 0);
@@ -978,13 +1039,11 @@ function switchTab(tab) {
 function openAdd() {
   editRkey = null; editCollection = null; selectedMedia = null;
   $('modal-title').textContent = 'Drop a breadcrumb';
-  $('f-title').value = '';
   $('f-notes').value = '';
   $('f-search').value = '';
   $('delete-btn').classList.add('hidden');
   $('selected-media').classList.add('hidden');
   $('search-group').classList.remove('hidden');
-  $('title-group').classList.remove('hidden');
   selGenre = ''; selRating = 0;
   pickType('book');
   pickStatus(STATUS.inProgress);
@@ -998,7 +1057,6 @@ function openEdit(rkey, collection) {
 
   editRkey = rkey; editCollection = collection; selectedMedia = null;
   $('modal-title').textContent = 'Edit entry';
-  $('f-title').value = e.title || '';
   $('f-notes').value = e.notes || '';
   $('f-search').value = '';
   $('delete-btn').classList.remove('hidden');
@@ -1011,11 +1069,10 @@ function openEdit(rkey, collection) {
     $('selected-meta1').textContent = (e.authors||[]).join(', ') || e.creator || e.developer || '';
     $('selected-meta2').textContent = '';
     $('search-group').classList.add('hidden');
-    $('title-group').classList.add('hidden');
   } else {
     $('selected-media').classList.add('hidden');
     $('search-group').classList.remove('hidden');
-    $('title-group').classList.remove('hidden');
+    $('f-search').value = e.title || '';
   }
 
   selGenre  = (e.genres && e.genres[0]) || '';
@@ -1114,7 +1171,7 @@ function buildProgressObject(type) {
 }
 
 async function saveEntry() {
-  var title = ($('f-title').value || (selectedMedia && selectedMedia.title) || '').trim();
+  var title = ((selectedMedia && selectedMedia.title) || $('f-search').value || '').trim();
   if (!title) { toast('Title is required', 'error'); return; }
 
   var entryData = {
@@ -1211,11 +1268,13 @@ function renderSearchResults(items) {
       ? 'background-image:url(' + esc(item.cover) + ');background-size:cover;background-position:center'
       : 'background:' + (COVER_BG[selType]||COVER_BG.book);
     return '<button class="bc-search-row"'
-      + ' data-title="'  + esc(item.title)  + '"'
-      + ' data-cover="'  + esc(item.cover||'')  + '"'
-      + ' data-author="' + esc(item.author||'') + '"'
-      + ' data-year="'   + esc(item.year||'')   + '"'
-      + ' data-isbn13="' + esc(item.isbn13||'') + '">'
+      + ' data-title="'     + esc(item.title)       + '"'
+      + ' data-cover="'     + esc(item.cover||'')   + '"'
+      + ' data-author="'    + esc(item.author||'')  + '"'
+      + ' data-year="'      + esc(item.year||'')    + '"'
+      + ' data-isbn13="'    + esc(item.isbn13||'')  + '"'
+      + ' data-pages="'     + esc(String(item.pages||''))     + '"'
+      + ' data-developer="' + esc(item.developer||'') + '">'
       + '<div class="bc-search-row__cover" style="' + coverStyle + '" aria-hidden="true"></div>'
       + '<div>'
       + '<div class="bc-search-row__title">' + esc(item.title) + '</div>'
@@ -1257,8 +1316,10 @@ function searchBooks(query) {
         return {
           title:  v.title || 'Unknown',
           author: (v.authors||[]).join(', '),
+          year:   (v.publishedDate||'').slice(0,4),
           cover:  v.imageLinks?.thumbnail || v.imageLinks?.smallThumbnail || '',
-          isbn13: isbn ? isbn.identifier : ''
+          isbn13: isbn ? isbn.identifier : '',
+          pages:  v.pageCount || ''
         };
       }));
     })
@@ -1288,10 +1349,11 @@ function searchGames(query) {
 function selectResult(el) {
   var d = el.dataset;
   selectedMedia = {
-    title:    d.title  || '',
-    coverUrl: d.cover  || '',
-    authors:  d.author ? [d.author] : null,
-    isbn13:   d.isbn13 || null
+    title:     d.title     || '',
+    coverUrl:  d.cover     || '',
+    authors:   d.author    ? [d.author] : null,
+    isbn13:    d.isbn13    || null,
+    developer: d.developer || null
   };
   $('selected-media').classList.remove('hidden');
   $('selected-cover').style.cssText = selectedMedia.coverUrl
@@ -1299,36 +1361,42 @@ function selectResult(el) {
     : 'background:' + (COVER_BG[selType]||COVER_BG.book);
   $('selected-title').textContent = selectedMedia.title;
   $('selected-meta1').textContent = d.author || d.year || '';
-  $('selected-meta2').textContent = '';
-  $('f-title').value  = selectedMedia.title;
+  $('selected-meta2').textContent = d.pages ? d.pages + ' pages' : (d.year && d.author ? d.year : '');
   $('f-search').value = '';
   $('search-results').classList.add('hidden');
   $('search-group').classList.add('hidden');
-  $('title-group').classList.add('hidden');
+
+  // Auto-fill progress fields from API data
+  if (selType === 'book' && d.pages) {
+    var tp = $('f-total-pages');
+    if (tp && !tp.value) tp.value = d.pages;
+  }
 }
 
 function clearSelection() {
   selectedMedia = null;
   $('selected-media').classList.add('hidden');
   $('search-group').classList.remove('hidden');
-  $('title-group').classList.remove('hidden');
-  $('f-title').value  = '';
   $('f-search').value = '';
 }
 
 
 // ── Analytics ────────────────────────────────────────────────
 function generateHeat(entries) {
-  var now   = new Date();
+  var now    = new Date();
   var weekMs = 7 * 24 * 3600 * 1000;
-  var heat  = {};
+  var types  = ['book','show','movie','game','podcast'];
+  var heat   = {};
+  types.forEach(function(t) {
+    heat[t] = {};
+    for (var i = 0; i < 26; i++) heat[t][i] = 0;
+  });
   entries.forEach(function(e) {
-    var d = new Date(e.createdAt);
-    var weeksAgo = Math.floor((now - d) / weekMs);
+    if (!heat[e.type]) return;
+    var weeksAgo = Math.floor((now - new Date(e.createdAt)) / weekMs);
     if (weeksAgo >= 0 && weeksAgo < 26) {
       var idx = 25 - weeksAgo;
-      if (!heat[idx]) heat[idx] = {level:0, type:e.type};
-      heat[idx].level = Math.min(3, heat[idx].level + 1);
+      heat[e.type][idx] = Math.min(3, heat[e.type][idx] + 1);
     }
   });
   return heat;
@@ -1351,13 +1419,16 @@ function updateStats() {
   var max = Math.max(1, Math.max.apply(null, Object.values(counts)));
   var heatData = generateHeat(entries);
 
-  // Build heat cells (26 cols × 5 rows = 130 cells, one per week per "row")
+  // Build heat cells: 5 rows (one per category) × 26 cols (weeks)
+  var heatTypes = ['book','show','movie','game','podcast'];
   var heatCells = '';
-  for (var i = 0; i < 130; i++) {
-    var weekIdx = i % 26;  // columns first
-    var h = heatData[weekIdx] || {level:0, type:'book'};
-    heatCells += '<div class="bc-heat__cell bc-heat__cell--' + h.type + '"'
-      + (h.level ? ' data-level="' + h.level + '"' : '') + '></div>';
+  for (var row = 0; row < 5; row++) {
+    var t = heatTypes[row];
+    for (var col = 0; col < 26; col++) {
+      var level = heatData[t] ? (heatData[t][col] || 0) : 0;
+      heatCells += '<div class="bc-heat__cell bc-heat__cell--' + t + '"'
+        + (level ? ' data-level="' + level + '"' : '') + '></div>';
+    }
   }
 
   var html =
@@ -1368,11 +1439,11 @@ function updateStats() {
     + types.map(function(t) {
         return '<div class="bc-bar">'
           + '<span class="bc-bar__label">'
-          + '<span class="bc-bar__label-dot" style="background:' + DOT_COLORS[t] + '"></span>'
+          + '<span class="bc-bar__label-dot bc-bar__label-dot--' + t + '"></span>'
           + LABELS[t] + 's'
           + '</span>'
           + '<div class="bc-bar__track">'
-          + '<div class="bc-bar__fill" style="width:' + (counts[t]/max*100) + '%;background:' + DOT_COLORS[t] + '"></div>'
+          + '<div class="bc-bar__fill bc-bar__fill--' + t + '" style="width:' + (counts[t]/max*100) + '%"></div>'
           + '</div>'
           + '<span class="bc-bar__count">' + counts[t] + '</span>'
           + '</div>';
@@ -1384,21 +1455,15 @@ function updateStats() {
     + '<p class="bc-heat__sub">Every breadcrumb dropped, the past six months.</p>'
     + '<div class="bc-heat__grid">' + heatCells + '</div>'
     + '<div class="bc-heat__legend"><span>6 mo ago</span><span>3 mo ago</span><span>Today</span></div>'
-    + '<div class="bc-heat__swatches">'
-    + types.map(function(t) {
-        return '<span class="bc-heat__swatch">'
-          + '<span class="bc-heat__swatch-dot bc-heat__swatch-dot--' + t + '"></span>'
-          + '<span>' + LABELS[t] + 's</span>'
-          + '</span>';
-      }).join('')
-    + '</div>'
     + '</div>'
 
-    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">'
     + [
         {n: sc[STATUS.inProgress]||0, l:'In progress'},
         {n: sc[STATUS.completed]||0,  l:'Completed'},
         {n: sc[STATUS.onHold]||0,     l:'On hold'},
+        {n: sc[STATUS.wantTo]||0,     l:'Want to'},
+        {n: sc[STATUS.abandoned]||0,  l:'Abandoned'},
         {n: entries.length,           l:'Total entries'}
       ].map(function(c) {
         return '<div class="bc-statuscell">'
@@ -1408,6 +1473,38 @@ function updateStats() {
       }).join('')
     + '</div>';
 
+  // Consumption totals
+  var totalPages = entries
+    .filter(function(e) { return e.type === 'book' && e.progress && e.progress.currentPage; })
+    .reduce(function(sum, e) { return sum + (e.progress.currentPage || 0); }, 0);
+  var totalHours = Math.round(entries
+    .filter(function(e) { return e.type === 'game' && e.progress && e.progress.playtimeMinutes; })
+    .reduce(function(sum, e) { return sum + (e.progress.playtimeMinutes || 0); }, 0) / 60);
+  var totalEpisodes = entries
+    .filter(function(e) { return e.type === 'show' && e.progress && e.progress.episode; })
+    .reduce(function(sum, e) { return sum + (e.progress.episode || 0); }, 0);
+
+  // Completion rate & avg rating
+  var startedCount = (sc[STATUS.completed]||0) + (sc[STATUS.abandoned]||0);
+  var completionRate = startedCount > 0 ? Math.round((sc[STATUS.completed]||0) / startedCount * 100) : null;
+  var ratedEntries = entries.filter(function(e) { return e.rating; });
+  var avgRating = ratedEntries.length > 0
+    ? Math.round(ratedEntries.reduce(function(sum, e) { return sum + e.rating; }, 0) / ratedEntries.length * 10) / 10
+    : null;
+
+  if (totalPages || totalHours || totalEpisodes) {
+    html += '<div class="bc-consumption">'
+      + '<div class="bc-consumption__title">Across all breadcrumbs</div>'
+      + '<div class="bc-consumption__row">'
+      + (totalPages    ? '<div class="bc-consumption__stat"><span class="bc-consumption__n">' + totalPages.toLocaleString() + '</span><span class="bc-consumption__l">pages read</span></div>' : '')
+      + (totalEpisodes ? '<div class="bc-consumption__stat"><span class="bc-consumption__n">' + totalEpisodes + '</span><span class="bc-consumption__l">episodes</span></div>' : '')
+      + (totalHours    ? '<div class="bc-consumption__stat"><span class="bc-consumption__n">' + totalHours + 'h</span><span class="bc-consumption__l">gaming</span></div>' : '')
+      + ((completionRate !== null) ? '<div class="bc-consumption__stat"><span class="bc-consumption__n">' + completionRate + '%</span><span class="bc-consumption__l">completion rate</span></div>' : '')
+      + (avgRating ? '<div class="bc-consumption__stat"><span class="bc-consumption__n">★ ' + avgRating + '</span><span class="bc-consumption__l">avg rating</span></div>' : '')
+      + '</div>'
+      + '</div>';
+  }
+
   container.innerHTML = html;
 }
 
@@ -1416,9 +1513,8 @@ function renderSettings() {
   var container = $('settings-container');
   if (!container) return;
 
-  var handle = session ? '@' + session.handle : 'Demo User';
-  var did    = session ? session.did : 'Local storage only';
-  var theme  = document.documentElement.getAttribute('data-theme') || 'day';
+  var handle  = session ? '@' + session.handle : 'Demo User';
+  var did     = session ? session.did : 'Local storage only';
   var largeText  = document.getElementById('app').classList.contains('is-large-text');
   var hideCovers = document.getElementById('app').classList.contains('is-hide-covers');
 
@@ -1438,11 +1534,34 @@ function renderSettings() {
     // ── Display
     + '<div class="bc-settings__section">'
     + '<div class="bc-settings__head">Display</div>'
-    + '<button class="bc-settings__item" id="s-theme">'
-    + '<span class="bc-settings__item-label">Theme</span>'
-    + '<span class="bc-settings__item-detail" id="theme-label">' + (theme === 'night' ? 'Night library' : 'Parchment') + '</span>'
-    + SVG_CHEV
-    + '</button>'
+    + '<div class="bc-settings__item bc-settings__item--stack">'
+    + '<span class="bc-settings__item-label">Palette</span>'
+    + '<div class="bc-palette-picker">'
+    + PALETTES.map(function(p) {
+        return '<button type="button" class="bc-palette-swatch' + (themePalette === p.id ? ' is-active' : '') + '"'
+          + ' title="' + p.name + '"'
+          + ' onclick="applyPalette(\'' + p.id + '\')">'
+          + '<div class="bc-palette-swatch__light" style="background:' + p.light.bg + '">'
+          + '<div class="bc-palette-swatch__dot" style="background:' + p.accent + '"></div>'
+          + '</div>'
+          + '<div class="bc-palette-swatch__dark" style="background:' + p.dark.bg + ';color:' + p.dark.fg + '">'
+          + '<span class="bc-palette-swatch__name">' + p.name + '</span>'
+          + '</div>'
+          + '</button>';
+      }).join('')
+    + '</div>'
+    + '</div>'
+    + '<div class="bc-settings__item bc-settings__item--stack">'
+    + '<span class="bc-settings__item-label">Mode</span>'
+    + '<div class="bc-mode-btns">'
+    + ['system','light','dark'].map(function(m) {
+        return '<button type="button" class="bc-mode-btn' + (themeMode === m ? ' is-active' : '') + '"'
+          + ' onclick="applyMode(\'' + m + '\')">'
+          + (m === 'system' ? 'System' : m === 'light' ? 'Light' : 'Dark')
+          + '</button>';
+      }).join('')
+    + '</div>'
+    + '</div>'
     + '<button class="bc-settings__item" id="s-large-text">'
     + '<span class="bc-settings__item-label">Larger type</span>'
     + '<span class="bc-toggle' + (largeText ? ' is-on' : '') + '" role="switch" aria-checked="' + largeText + '"></span>'
@@ -1489,7 +1608,6 @@ function renderSettings() {
   container.innerHTML = html;
 
   // Bind settings handlers
-  $('s-theme').onclick       = toggleTheme;
   $('s-large-text').onclick  = toggleLargeText;
   $('s-hide-covers').onclick = toggleHideCovers;
   $('s-export').onclick      = exportData;
