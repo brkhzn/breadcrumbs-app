@@ -4,1376 +4,462 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="theme-color" content="#0a0a0b">
-  <title>Breadcrumbs - AT Protocol</title>
-  <style>
-    :root{
-      --bg:#0a0a0b;--bg2:#141416;--bg3:#1c1c1f;--bg4:#232326;
-      --text:#fafafa;--text2:#a1a1aa;--text3:#71717a;--border:#27272a;
-      --accent:#f97316;
-      --book:#22c55e;--show:#8b5cf6;--movie:#f59e0b;--game:#ef4444;--podcast:#fb923c;
-      --bsky:#0085ff;--r:14px
-    }
-    @media(prefers-color-scheme:light){
-      :root{
-        --bg:#f8f8f6;--bg2:#ffffff;--bg3:#f0f0ee;--bg4:#e8e8e5;
-        --text:#18181b;--text2:#52525b;--text3:#a1a1aa;--border:#e4e4e7
-      }
-    }
-    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-    html,body{height:100%;overflow:hidden}
-    body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--text);line-height:1.5}
-    #app{height:100%;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
-    .screen{display:none;flex-direction:column;height:100%}.screen.active{display:flex}
-
-    /* Auth */
-    .auth{justify-content:center;align-items:center;padding:24px}
-    .auth-box{width:100%;max-width:360px;text-align:center}
-    .auth-logo{font-size:56px;margin-bottom:12px}
-    .auth h1{font-family:Georgia,serif;font-style:italic;font-size:32px;font-weight:400;margin-bottom:8px}
-    .auth p{color:var(--text2);margin-bottom:32px}
-    .auth-section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:16px;text-align:left}
-    .auth-section h3{font-size:14px;margin-bottom:4px;display:flex;align-items:center;gap:8px}
-    .auth-section p{font-size:12px;color:var(--text3);margin-bottom:16px}
-    .bsky-badge{background:var(--bsky);color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:600}
-    .auth input{width:100%;padding:12px 14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:15px;margin-bottom:12px}
-    .auth input:focus{outline:none;border-color:var(--accent)}
-    .auth input::placeholder{color:var(--text3)}
-    .btn{width:100%;padding:14px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;border:none;display:flex;align-items:center;justify-content:center;gap:8px}
-    .btn-bsky{background:var(--bsky);color:#fff}
-    .btn-bsky:hover{background:#0070dd}
-    .btn-secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border);margin-top:12px}
-    .auth-note{font-size:11px;color:var(--text3);margin-top:16px;padding:12px;background:var(--bg2);border-radius:8px;text-align:left}
-    .auth-note a{color:var(--bsky)}
-    .auth-error{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;padding:12px;border-radius:8px;font-size:13px;margin-bottom:12px;display:none}
-    .auth-error.show{display:block}
-
-    /* Header */
-    .header{padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);background:var(--bg)}
-    .header-title{font-family:Georgia,serif;font-style:italic;font-size:22px;display:flex;align-items:center;gap:8px}
-    .header-badge{font-size:9px;background:var(--bsky);color:#fff;padding:2px 6px;border-radius:4px;font-weight:600;font-style:normal}
-    .add-btn{width:44px;height:44px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:24px;cursor:pointer}
-
-    /* Content */
-    .content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 20px}
-    .entries{display:flex;flex-direction:column;gap:14px}
-    .loading-entries{text-align:center;padding:40px;color:var(--text3)}
-    .loading-entries .spinner{margin:0 auto 16px}
-
-    /* Cards */
-    .card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
-    .card-main{display:flex;padding:14px;gap:12px}
-    .card-accent{width:3px;flex-shrink:0;border-radius:2px}
-    .card-accent.book{background:var(--book)}
-    .card-accent.show{background:var(--show)}
-    .card-accent.movie{background:var(--movie)}
-    .card-accent.game{background:var(--game)}
-    .card-accent.podcast{background:var(--podcast)}
-    .card-cover{width:60px;height:86px;border-radius:8px;object-fit:cover;background:var(--bg3);flex-shrink:0}
-    .card-icon{width:60px;height:86px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0}
-    .card-icon.book{background:rgba(34,197,94,0.12);color:var(--book)}
-    .card-icon.show{background:rgba(139,92,246,0.12);color:var(--show)}
-    .card-icon.movie{background:rgba(245,158,11,0.12);color:var(--movie)}
-    .card-icon.game{background:rgba(239,68,68,0.12);color:var(--game)}
-    .card-icon.podcast{background:rgba(251,146,60,0.12);color:var(--podcast)}
-    .card-info{flex:1;min-width:0}
-    .card-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
-    .card-type{font-size:10px;font-weight:600;text-transform:uppercase;padding:3px 8px;border-radius:12px}
-    .card-type.book{background:rgba(34,197,94,0.12);color:var(--book)}
-    .card-type.show{background:rgba(139,92,246,0.12);color:var(--show)}
-    .card-type.movie{background:rgba(245,158,11,0.12);color:var(--movie)}
-    .card-type.game{background:rgba(239,68,68,0.12);color:var(--game)}
-    .card-type.podcast{background:rgba(251,146,60,0.12);color:var(--podcast)}
-    .card-date{font-size:11px;color:var(--text3)}
-    .card-title{font-size:16px;font-weight:600;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .card-subtitle{font-size:11px;color:var(--text3);margin-bottom:3px}
-    .card-progress{font-size:13px;color:var(--accent);font-weight:500;margin-bottom:3px}
-    .card-status{font-size:11px;color:var(--text3);margin-bottom:3px}
-    .card-notes{font-size:12px;color:var(--text2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-    .card-actions{display:flex;border-top:1px solid var(--border)}
-    .card-action{flex:1;padding:11px;background:none;border:none;color:var(--text2);font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px}
-    .card-action:first-child{border-right:1px solid var(--border)}
-    .card-action.accent{color:var(--accent)}
-
-    /* Empty */
-    .empty{text-align:center;padding:60px 20px}
-    .empty-icon{font-size:48px;margin-bottom:16px}
-    .empty h3{font-family:Georgia,serif;font-style:italic;font-size:22px;margin-bottom:8px}
-    .empty p{color:var(--text2);font-size:14px}
-
-    /* Tabs */
-    .tabs{display:flex;background:var(--bg2);border-top:1px solid var(--border);padding:8px 16px;padding-bottom:calc(8px + env(safe-area-inset-bottom))}
-    .tab{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px}
-    .tab.active{color:var(--accent)}
-    .tab-label{font-size:10px;margin-top:4px}
-    .tab-panel{display:none;flex-direction:column;height:100%}.tab-panel.active{display:flex}
-
-    /* Modal */
-    .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;display:none;align-items:flex-end}
-    .modal-bg.active{display:flex}
-    .modal{width:100%;max-height:90vh;background:var(--bg2);border-radius:var(--r) var(--r) 0 0;display:flex;flex-direction:column}
-    .modal-head{display:flex;justify-content:space-between;align-items:center;padding:18px 20px;border-bottom:1px solid var(--border)}
-    .modal-title{font-size:17px;font-weight:600}
-    .modal-close{width:32px;height:32px;border-radius:50%;background:var(--bg3);border:none;color:var(--text2);font-size:18px;cursor:pointer}
-    .modal-body{flex:1;overflow-y:auto;padding:20px}
-
-    /* Form */
-    .form-group{margin-bottom:18px}
-    .form-label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.04em}
-    .form-input{width:100%;padding:12px 14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:16px}
-    .form-input:focus{outline:none;border-color:var(--accent)}
-    .form-input::placeholder{color:var(--text3)}
-    .form-textarea{min-height:80px;resize:vertical}
-
-    /* Type selector */
-    .types{display:flex;gap:8px}
-    .type-btn{flex:1;height:54px;border-radius:10px;background:var(--bg);border:2px solid var(--border);font-size:20px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;transition:border-color 0.15s}
-    .type-btn span{font-size:9px;color:var(--text3);font-weight:600;text-transform:uppercase}
-    .type-btn.active.book{border-color:var(--book);background:rgba(34,197,94,0.08)}
-    .type-btn.active.show{border-color:var(--show);background:rgba(139,92,246,0.08)}
-    .type-btn.active.movie{border-color:var(--movie);background:rgba(245,158,11,0.08)}
-    .type-btn.active.game{border-color:var(--game);background:rgba(239,68,68,0.08)}
-    .type-btn.active.podcast{border-color:var(--podcast);background:rgba(251,146,60,0.08)}
-
-    /* Status selector */
-    .status-wrap{display:flex;flex-wrap:wrap;gap:6px}
-    .status-btn{padding:7px 12px;background:var(--bg);border:1px solid var(--border);border-radius:16px;font-size:12px;font-weight:500;cursor:pointer;color:var(--text2)}
-    .status-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
-
-    /* Progress row */
-    .progress-row{display:flex;gap:8px;align-items:center}
-    .progress-row .form-input{flex:1}
-    .prog-sep{font-size:13px;color:var(--text3);white-space:nowrap}
-
-    /* Search */
-    .search-wrap{position:relative}
-    .search-results{position:absolute;top:100%;left:0;right:0;background:var(--bg3);border:1px solid var(--border);border-radius:10px;margin-top:4px;max-height:280px;overflow-y:auto;z-index:100;display:none}
-    .search-results.active{display:block}
-    .search-item{display:flex;align-items:center;gap:12px;padding:12px;cursor:pointer;border-bottom:1px solid var(--border)}
-    .search-item:last-child{border-bottom:none}
-    .search-item:hover{background:var(--bg4)}
-    .search-item img{width:45px;height:65px;object-fit:cover;border-radius:6px;background:var(--bg)}
-    .search-item-info{flex:1;min-width:0}
-    .search-item-title{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .search-item-meta{font-size:11px;color:var(--text3)}
-    .search-loading,.search-empty{padding:20px;text-align:center;color:var(--text3);font-size:13px}
-
-    /* Selected media */
-    .selected-media{display:flex;gap:14px;padding:14px;background:var(--bg);border-radius:10px;margin-bottom:18px}
-    .selected-media img{width:60px;height:86px;object-fit:cover;border-radius:8px}
-    .selected-media-info{flex:1}
-    .selected-media-title{font-size:15px;font-weight:600;margin-bottom:4px}
-    .selected-media-meta{font-size:12px;color:var(--text2);margin-bottom:2px}
-    .selected-media-clear{background:none;border:none;color:var(--accent);font-size:12px;cursor:pointer;padding:0;margin-top:8px}
-    .hidden{display:none!important}
-
-    /* Genres & Rating */
-    .genres{display:flex;flex-wrap:wrap;gap:6px}
-    .genre{padding:7px 12px;background:var(--bg);border:1px solid var(--border);border-radius:16px;font-size:12px;cursor:pointer}
-    .genre.active{background:var(--accent);border-color:var(--accent);color:#fff}
-    .stars{display:flex;gap:6px}
-    .star{font-size:26px;cursor:pointer}
-    .btn-primary{background:var(--accent);color:#fff}
-    .btn-danger{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#fca5a5}
-
-    /* AI Modal */
-    .ai-modal{position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:1001;display:none;align-items:center;justify-content:center;padding:20px}
-    .ai-modal.active{display:flex}
-    .ai-box{width:100%;max-width:380px;max-height:75vh;background:var(--bg2);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column}
-    .ai-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
-    .ai-head h3{font-size:15px;display:flex;align-items:center;gap:8px}
-    .ai-body{flex:1;overflow-y:auto;padding:20px}
-    .ai-text{font-size:14px;line-height:1.7}
-    .ai-text strong{color:var(--accent)}
-    .ai-foot{padding:14px;border-top:1px solid var(--border);text-align:center;font-size:11px;color:var(--text3)}
-    .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin:30px auto}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    @media(prefers-reduced-motion:reduce){.spinner,.mini-spinner{animation:none;border-top-color:var(--border)}}
-
-    /* Stats */
-    .stats{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:14px}
-    .stats-title{font-size:15px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px}
-    .bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-    .bar-label{width:70px;font-size:12px}
-    .bar-track{flex:1;height:20px;background:var(--bg);border-radius:5px;overflow:hidden}
-    .bar-fill{height:100%;border-radius:5px}
-    .bar-count{width:24px;text-align:right;font-size:12px;color:var(--text2)}
-
-    /* Settings */
-    .settings-section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:14px;overflow:hidden}
-    .settings-head{font-size:11px;font-weight:600;color:var(--text2);padding:14px 18px 10px;text-transform:uppercase}
-    .settings-item{display:flex;align-items:center;padding:14px 18px;border-top:1px solid var(--border);cursor:pointer;gap:12px}
-    .settings-item:hover{background:var(--bg3)}
-    .settings-text{flex:1;font-size:14px}
-    .user-info{display:flex;align-items:center;gap:12px;padding:18px}
-    .user-avatar{width:48px;height:48px;border-radius:50%;background:var(--bsky);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:18px;overflow:hidden}
-    .user-avatar img{width:100%;height:100%;object-fit:cover}
-    .user-handle{font-size:14px;font-weight:500}
-    .user-did{font-size:11px;color:var(--text3);word-break:break-all}
-    .user-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--bsky);margin-top:4px}
-    .about{text-align:center;padding:30px}
-    .about-logo{font-size:44px;margin-bottom:10px}
-    .about-name{font-family:Georgia,serif;font-style:italic;font-size:24px;margin-bottom:4px}
-    .about-ver{font-size:12px;color:var(--text3);margin-bottom:8px}
-    .about-tag{font-size:13px;color:var(--text2);font-style:italic}
-    .about-atp{font-size:11px;color:var(--bsky);margin-top:12px}
-
-    /* Toast */
-    .toast-box{position:fixed;bottom:100px;left:20px;right:20px;z-index:2000;max-width:400px;margin:0 auto}
-    .toast{padding:12px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:8px;animation:slideUp 0.3s;box-shadow:0 4px 12px rgba(0,0,0,0.3)}
-    .toast.success{border-color:var(--book);background:rgba(34,197,94,0.12)}
-    .toast.error{border-color:#ef4444;background:rgba(239,68,68,0.12)}
-    @keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-
-    /* Demo banner */
-    .demo-banner{background:linear-gradient(90deg,#065f46,#047857);color:#fff;padding:8px 16px;font-size:12px;text-align:center;font-weight:500}
-
-    /* Desktop */
-    @media(min-width:768px){
-      .content{padding:20px 32px}
-      .entries{max-width:600px;margin:0 auto}
-      .header{padding:16px 32px}
-      .tabs{padding:12px 32px;padding-bottom:calc(12px + env(safe-area-inset-bottom))}
-      .stats,.settings-section,.about{max-width:600px;margin-left:auto;margin-right:auto;margin-bottom:14px}
-      .card{transition:transform 0.2s,box-shadow 0.2s}
-      .card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.3)}
-    }
-
-    /* Sync indicator */
-    .sync-indicator{position:fixed;bottom:80px;right:20px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:8px 14px;font-size:12px;display:none;align-items:center;gap:6px;z-index:999}
-    .sync-indicator.active{display:flex}
-    .sync-indicator .mini-spinner{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--bsky);border-radius:50%;animation:spin 0.8s linear infinite}
-  </style>
+  <meta name="theme-color" content="#F5EFE2" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#14110C"  media="(prefers-color-scheme: dark)">
+  <title>Breadcrumbs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Lora:ital,wght@0,400;0,500;1,400;1,500&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/breadcrumbs.css">
 </head>
 <body>
 <div id="app">
 
-  <!-- Auth -->
-  <div id="auth-screen" class="screen auth active">
-    <div class="auth-box">
-      <div class="auth-logo">🍞</div>
-      <h1>Breadcrumbs</h1>
-      <p>Never lose your place again</p>
-      <div class="auth-section">
-        <h3><span class="bsky-badge">BLUESKY</span> Sign in with AT Protocol</h3>
-        <p>Your data stays in your personal data server. You own it.</p>
-        <div class="auth-error" id="auth-error"></div>
-        <input type="text" id="auth-handle" placeholder="yourhandle.bsky.social">
-        <input type="password" id="auth-password" placeholder="App Password">
-        <button class="btn btn-bsky" id="signin-btn">🦋 Sign in with Bluesky</button>
+  <!-- ═══ AUTH ═══════════════════════════════════════════════ -->
+  <div id="auth-screen" class="screen active">
+    <div class="bc-auth">
+      <div class="bc-auth__box">
+
+        <div class="bc-auth__mark">
+          <!-- LogoMark -->
+          <svg width="56" height="56" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <path d="M8 4L8 28L24 24L24 4Z" fill="currentColor" opacity="0.15"/>
+            <path d="M8 4L8 28L24 24L24 4Z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+            <path d="M8 14L24 12" stroke="currentColor" stroke-width="1.5"/>
+            <circle cx="16" cy="28" r="2.5" fill="currentColor" opacity="0.6"/>
+          </svg>
+        </div>
+
+        <h1 class="bc-auth__title">Breadcrumbs</h1>
+        <p class="bc-auth__tag">Never lose your place again.</p>
+
+        <div class="bc-auth__card">
+          <div class="bc-label">
+            Sign in with Bluesky
+            <span class="bc-header__atp">ATP</span>
+          </div>
+          <p class="bc-auth__sub">Your data stays with you, on your own server.</p>
+          <div class="bc-auth__error hidden" id="auth-error"></div>
+          <input class="bc-input" id="auth-handle" type="text"
+            placeholder="handle.bsky.social" autocomplete="username" autocapitalize="none">
+          <input class="bc-input" id="auth-password" type="password"
+            placeholder="App password" autocomplete="current-password" style="margin-top:10px">
+          <button class="bc-btn bc-btn--primary bc-btn--block bc-btn--lg" id="signin-btn" style="margin-top:12px">
+            Continue
+          </button>
+        </div>
+
+        <div class="bc-auth__or">or</div>
+        <button class="bc-btn bc-btn--secondary bc-btn--block" id="demo-btn">
+          Try the demo
+        </button>
+
+        <div class="bc-auth__note">
+          <!-- ATP icon -->
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" style="flex-shrink:0;margin-top:2px;color:var(--lavender)">
+            <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3"/>
+            <path d="M5.5 11L8 5l2.5 6M6.5 9h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+          <span>Built on AT Protocol. Every breadcrumb lives in your Personal Data Server — portable, exportable, yours.</span>
+        </div>
+
       </div>
-      <div class="auth-note">
-        <strong>🔐 Security Note:</strong> Use an <a href="https://bsky.app/settings/app-passwords" target="_blank">App Password</a>, not your main password.
-        <br><br>
-        <strong>📦 Data Ownership:</strong> Your breadcrumbs are stored in YOUR AT Protocol repository.
-      </div>
-      <button class="btn btn-secondary" id="demo-btn">Try Demo (Local Only)</button>
     </div>
-  </div>
+  </div><!-- /auth-screen -->
 
-  <!-- Main -->
-  <div id="main-screen" class="screen">
-    <div id="demo-banner" class="demo-banner hidden">📦 Demo Mode — data stored locally only</div>
 
-    <!-- Timeline -->
+  <!-- ═══ MAIN ════════════════════════════════════════════════ -->
+  <div id="main-screen" class="screen" style="position:relative">
+
+    <div id="demo-banner" class="bc-demo-banner hidden">
+      Demo Mode — data stored locally only
+    </div>
+
+    <!-- ─── TIMELINE ────────────────────────────────────────── -->
     <div id="timeline-panel" class="tab-panel active">
-      <div class="header">
-        <div class="header-title">
-          <span>🍞</span> Breadcrumbs
-          <span class="header-badge" id="atp-badge" style="display:none">ATP</span>
+
+      <header class="bc-header">
+        <div class="bc-header__title">
+          <svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-hidden="true" style="flex-shrink:0;color:var(--accent)">
+            <path d="M8 4L8 28L24 24L24 4Z" fill="currentColor" opacity="0.15"/>
+            <path d="M8 4L8 28L24 24L24 4Z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+            <path d="M8 14L24 12" stroke="currentColor" stroke-width="1.5"/>
+            <circle cx="16" cy="28" r="2.5" fill="currentColor" opacity="0.6"/>
+          </svg>
+          <span class="bc-header__word">Breadcrumbs</span>
+          <span class="bc-header__atp hidden" id="atp-badge">ATP</span>
         </div>
-        <button class="add-btn" id="add-btn">+</button>
+        <button class="bc-header__add" id="add-btn" aria-label="Add entry">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <line x1="10" y1="4" x2="10" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="4"  y1="10" x2="16" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </header>
+
+      <!-- Filter bar -->
+      <div class="bc-filters-wrap">
+        <div class="bc-filters" role="tablist" aria-label="Filter by category" id="filter-bar">
+          <button role="tab" aria-selected="true"  class="bc-filter is-active" data-f="all">All</button>
+          <button role="tab" aria-selected="false" class="bc-filter" data-f="book">
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="3" y="2" width="10" height="13" rx="1" stroke="currentColor" stroke-width="1.3" fill="none"/><line x1="6" y1="6" x2="11" y2="6" stroke="currentColor" stroke-width="1.3"/><line x1="6" y1="9" x2="9" y2="9" stroke="currentColor" stroke-width="1.3"/></svg>
+            Books
+          </button>
+          <button role="tab" aria-selected="false" class="bc-filter" data-f="show">
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="3" width="12" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3" fill="none"/><polygon points="6.5,6 10.5,8 6.5,10" fill="currentColor" opacity=".7"/></svg>
+            Shows
+          </button>
+          <button role="tab" aria-selected="false" class="bc-filter" data-f="movie">
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="3" width="12" height="10" rx="1" stroke="currentColor" stroke-width="1.3" fill="none"/><line x1="2" y1="6" x2="14" y2="6" stroke="currentColor" stroke-width="1"/><line x1="5" y1="3" x2="5" y2="6" stroke="currentColor" stroke-width="1"/><line x1="8" y1="3" x2="8" y2="6" stroke="currentColor" stroke-width="1"/><line x1="11" y1="3" x2="11" y2="6" stroke="currentColor" stroke-width="1"/></svg>
+            Films
+          </button>
+          <button role="tab" aria-selected="false" class="bc-filter" data-f="game">
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="3" y="5" width="10" height="7" rx="2" stroke="currentColor" stroke-width="1.3" fill="none"/><line x1="8" y1="6.5" x2="8" y2="9.5" stroke="currentColor" stroke-width="1.3"/><line x1="6.5" y1="8" x2="9.5" y2="8" stroke="currentColor" stroke-width="1.3"/><circle cx="11" cy="8" r=".8" fill="currentColor"/></svg>
+            Games
+          </button>
+          <button role="tab" aria-selected="false" class="bc-filter" data-f="podcast">
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="6" r="2.5" stroke="currentColor" stroke-width="1.3" fill="none"/><path d="M5 9.5a4.5 4.5 0 006 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="8" y1="12" x2="8" y2="14" stroke="currentColor" stroke-width="1.3"/></svg>
+            Podcasts
+          </button>
+        </div>
       </div>
-      <div class="content">
-        <div id="loading-entries" class="loading-entries hidden">
-          <div class="spinner"></div>
-          <p>Loading from your PDS...</p>
+
+      <!-- Catchup hero (shown when entries exist) -->
+      <div id="catchup-hero" class="bc-catchup hidden">
+        <div class="bc-catchup__kicker">
+          <span class="bc-catchup__kicker-dot"></span>
+          <svg width="11" height="11" viewBox="0 0 14 14" fill="currentColor" aria-hidden="true"><path d="M7 0l1.1 4.9L13 7l-4.9 1.1L7 14l-1.1-4.9L1 7l4.9-1.1z"/></svg>
+          AI recap ready
         </div>
-        <div id="entries" class="entries"></div>
-        <div id="empty" class="empty hidden">
-          <div class="empty-icon">🔖</div>
+        <div class="bc-catchup__title">Catch me up on where I left off</div>
+        <div class="bc-catchup__body">A personalized recap of everything in progress, from your own breadcrumbs.</div>
+        <div class="bc-catchup__foot">
+          <button class="bc-catchup__btn" id="catchup-open-btn">
+            <svg width="12" height="12" viewBox="0 0 14 14" fill="currentColor" aria-hidden="true"><path d="M7 0l1.1 4.9L13 7l-4.9 1.1L7 14l-1.1-4.9L1 7l4.9-1.1z"/></svg>
+            Read recap
+          </button>
+          <span class="bc-catchup__meta">Breadcrumbs+</span>
+        </div>
+        <button class="bc-catchup__dismiss" id="catchup-dismiss-btn" aria-label="Dismiss">✕</button>
+      </div>
+
+      <!-- Entries -->
+      <div class="bc-content">
+        <div id="loading-entries" class="hidden" style="text-align:center;padding:48px 24px">
+          <div class="bc-spinner"></div>
+          <p style="margin-top:14px;font-family:var(--serif-body);font-style:italic;color:var(--fg-3)">Loading from your PDS…</p>
+        </div>
+        <div id="entries" class="bc-entries"></div>
+        <div id="empty" class="bc-empty hidden">
+          <svg width="32" height="32" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M5 3h10a1 1 0 011 1v13l-6-3.5L4 17V4a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/></svg>
           <h3>No breadcrumbs yet</h3>
-          <p>Tap + to log where you left off in a book, show, movie, game, or podcast.</p>
+          <p>Tap + to log where you left off in a book, show, film, game, or podcast.</p>
         </div>
       </div>
-    </div>
 
-    <!-- Analytics -->
-    <div id="analytics-panel" class="tab-panel">
-      <div class="header"><div class="header-title">📊 Analytics</div></div>
-      <div class="content">
-        <div class="stats">
-          <div class="stats-title">📈 <span id="total-count">0 Entries</span></div>
-          <div id="chart"></div>
-        </div>
-        <div class="stats">
-          <div class="stats-title">🎯 By Genre</div>
-          <div id="genre-chart"></div>
-        </div>
-      </div>
-    </div>
+    </div><!-- /timeline-panel -->
 
-    <!-- Settings -->
-    <div id="settings-panel" class="tab-panel">
-      <div class="header"><div class="header-title">⚙️ Settings</div></div>
-      <div class="content">
-        <div class="settings-section">
-          <div class="user-info">
-            <div class="user-avatar" id="avatar">?</div>
-            <div style="flex:1;min-width:0">
-              <div class="user-handle" id="user-handle">@handle</div>
-              <div class="user-did" id="user-did"></div>
-              <div class="user-badge" id="user-badge" style="display:none">🦋 Connected via AT Protocol</div>
-            </div>
+
+    <!-- ─── LISTS ─────────────────────────────────────────── -->
+    <div id="lists-panel" class="tab-panel">
+
+      <header class="bc-header">
+        <div class="bc-header__title">
+          <span class="bc-header__word">Lists</span>
+        </div>
+        <button class="bc-icon-btn" id="new-list-btn" aria-label="New list">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <line x1="10" y1="4" x2="10" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="4"  y1="10" x2="16" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </header>
+
+      <div class="bc-content">
+        <div id="lists-container">
+          <div class="bc-empty">
+            <svg width="32" height="32" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M5 3h10a1 1 0 011 1v13l-6-3.5L4 17V4a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/></svg>
+            <h3>No lists yet</h3>
+            <p>Gather your breadcrumbs into a curated list — winter reads, rewatch queue, anything.</p>
+            <button class="bc-btn bc-btn--secondary" style="margin-top:18px" id="create-list-btn">
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true"><line x1="10" y1="4" x2="10" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="4" y1="10" x2="16" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              New list
+            </button>
           </div>
         </div>
-        <div class="settings-section">
-          <div class="settings-head">Data</div>
-          <div class="settings-item" id="export-btn"><span>📥</span><span class="settings-text">Export Data (JSON)</span><span>›</span></div>
-          <div class="settings-item" id="refresh-btn"><span>🔄</span><span class="settings-text">Refresh from PDS</span><span>›</span></div>
+      </div>
+
+    </div><!-- /lists-panel -->
+
+
+    <!-- ─── READING / ANALYTICS ───────────────────────────── -->
+    <div id="analytics-panel" class="tab-panel">
+
+      <header class="bc-header">
+        <div class="bc-header__title">
+          <span class="bc-header__word">Reading</span>
         </div>
-        <div class="settings-section">
-          <div class="settings-head">Account</div>
-          <div class="settings-item" id="logout-btn"><span>🚪</span><span class="settings-text">Sign Out</span><span>›</span></div>
-        </div>
-        <div class="about">
-          <div class="about-logo">🍞</div>
-          <div class="about-name">Breadcrumbs</div>
-          <div class="about-ver">Version 2.1.0</div>
-          <div class="about-tag">Never lose your place again.</div>
-          <div class="about-atp">Powered by AT Protocol 🦋</div>
+      </header>
+
+      <div class="bc-content">
+        <div id="analytics-container" class="bc-analytics">
+          <!-- populated by updateStats() -->
         </div>
       </div>
-    </div>
 
-    <!-- Tabs -->
-    <div class="tabs">
-      <button class="tab active" data-tab="timeline"><span>📚</span><span class="tab-label">Timeline</span></button>
-      <button class="tab" data-tab="analytics"><span>📊</span><span class="tab-label">Analytics</span></button>
-      <button class="tab" data-tab="settings"><span>⚙️</span><span class="tab-label">Settings</span></button>
-    </div>
-  </div>
+    </div><!-- /analytics-panel -->
 
-  <!-- Entry Modal -->
-  <div class="modal-bg" id="entry-modal">
-    <div class="modal">
-      <div class="modal-head">
-        <span class="modal-title" id="modal-title">New Entry</span>
-        <button class="modal-close" id="modal-close">✕</button>
+
+    <!-- ─── SETTINGS ──────────────────────────────────────── -->
+    <div id="settings-panel" class="tab-panel">
+
+      <header class="bc-header">
+        <div class="bc-header__title">
+          <span class="bc-header__word">Settings</span>
+        </div>
+      </header>
+
+      <div class="bc-content">
+        <div id="settings-container" class="bc-settings">
+          <!-- populated by renderSettings() -->
+        </div>
       </div>
-      <div class="modal-body">
+
+    </div><!-- /settings-panel -->
+
+
+    <!-- ─── TAB BAR ───────────────────────────────────────── -->
+    <nav class="bc-tabs" role="tablist" aria-label="Main navigation">
+
+      <button class="bc-tab is-active" data-tab="timeline" role="tab" aria-selected="true">
+        <span class="bc-tab__icon" aria-hidden="true">
+          <svg viewBox="0 0 22 22" fill="none"><rect x="3" y="4" width="7" height="9" rx="1" stroke="currentColor" stroke-width="1.4" fill="none"/><rect x="12" y="4" width="7" height="5" rx="1" stroke="currentColor" stroke-width="1.4" fill="none"/><rect x="12" y="11" width="7" height="5" rx="1" stroke="currentColor" stroke-width="1.4" fill="none"/><line x1="3" y1="15" x2="10" y2="15" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="3" y1="17.5" x2="8" y2="17.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </span>
+        <span class="bc-tab__label">Timeline</span>
+      </button>
+
+      <button class="bc-tab" data-tab="lists" role="tab" aria-selected="false">
+        <span class="bc-tab__icon" aria-hidden="true">
+          <svg viewBox="0 0 22 22" fill="none"><path d="M5 3h12a1 1 0 011 1v14l-7-4-7 4V4a1 1 0 011-1z" stroke="currentColor" stroke-width="1.4" fill="none"/><line x1="8" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="8" y1="11" x2="12" y2="11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        </span>
+        <span class="bc-tab__label">Lists</span>
+      </button>
+
+      <button class="bc-tab" data-tab="analytics" role="tab" aria-selected="false">
+        <span class="bc-tab__icon" aria-hidden="true">
+          <svg viewBox="0 0 22 22" fill="none"><line x1="3" y1="18" x2="19" y2="18" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><rect x="4"  y="12" width="3" height="6" rx=".5" fill="currentColor" opacity=".6"/><rect x="9"  y="8"  width="3" height="10" rx=".5" fill="currentColor" opacity=".8"/><rect x="14" y="5"  width="3" height="13" rx=".5" fill="currentColor"/></svg>
+        </span>
+        <span class="bc-tab__label">Reading</span>
+      </button>
+
+      <button class="bc-tab" data-tab="settings" role="tab" aria-selected="false">
+        <span class="bc-tab__icon" aria-hidden="true">
+          <svg viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="2.5" stroke="currentColor" stroke-width="1.4" fill="none"/><path d="M11 3v2M11 17v2M3 11h2M17 11h2M5.4 5.4l1.4 1.4M15.2 15.2l1.4 1.4M5.4 16.6l1.4-1.4M15.2 6.8l1.4-1.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </span>
+        <span class="bc-tab__label">Settings</span>
+      </button>
+
+    </nav>
+
+  </div><!-- /main-screen -->
+
+
+  <!-- ═══ ENTRY MODAL ══════════════════════════════════════════ -->
+  <div class="bc-modal-bg" id="entry-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="bc-modal">
+      <div class="bc-modal__grip" aria-hidden="true"></div>
+
+      <div class="bc-modal__head">
+        <span class="bc-modal__title" id="modal-title">Drop a breadcrumb</span>
+        <button class="bc-modal__close" id="modal-close" aria-label="Close">✕</button>
+      </div>
+
+      <div class="bc-modal__body" id="modal-body">
 
         <!-- Type -->
-        <div class="form-group">
-          <div class="form-label">Type</div>
-          <div class="types" id="types">
-            <button class="type-btn book active" data-t="book">📚<span>Book</span></button>
-            <button class="type-btn show" data-t="show">📺<span>Show</span></button>
-            <button class="type-btn movie" data-t="movie">🎬<span>Movie</span></button>
-            <button class="type-btn game" data-t="game">🎮<span>Game</span></button>
-            <button class="type-btn podcast" data-t="podcast">🎙️<span>Podcast</span></button>
+        <div class="bc-field">
+          <div class="bc-label">Media type</div>
+          <div class="bc-types" id="types">
+            <button class="bc-type bc-type--book is-active" data-t="book">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="3" y="2" width="10" height="13" rx="1" stroke="currentColor" stroke-width="1.3" fill="none"/><line x1="6" y1="6" x2="11" y2="6" stroke="currentColor" stroke-width="1.3"/><line x1="6" y1="9" x2="9" y2="9" stroke="currentColor" stroke-width="1.3"/></svg>
+              <span>Book</span>
+            </button>
+            <button class="bc-type bc-type--show" data-t="show">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="3" width="12" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3" fill="none"/><polygon points="6.5,6 10.5,8 6.5,10" fill="currentColor" opacity=".7"/></svg>
+              <span>Show</span>
+            </button>
+            <button class="bc-type bc-type--movie" data-t="movie">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="3" width="12" height="10" rx="1" stroke="currentColor" stroke-width="1.3" fill="none"/><line x1="2" y1="6" x2="14" y2="6" stroke="currentColor" stroke-width="1"/><line x1="5" y1="3" x2="5" y2="6" stroke="currentColor" stroke-width="1"/><line x1="8" y1="3" x2="8" y2="6" stroke="currentColor" stroke-width="1"/><line x1="11" y1="3" x2="11" y2="6" stroke="currentColor" stroke-width="1"/></svg>
+              <span>Film</span>
+            </button>
+            <button class="bc-type bc-type--game" data-t="game">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="3" y="5" width="10" height="7" rx="2" stroke="currentColor" stroke-width="1.3" fill="none"/><line x1="8" y1="6.5" x2="8" y2="9.5" stroke="currentColor" stroke-width="1.3"/><line x1="6.5" y1="8" x2="9.5" y2="8" stroke="currentColor" stroke-width="1.3"/><circle cx="11" cy="8" r=".8" fill="currentColor"/></svg>
+              <span>Game</span>
+            </button>
+            <button class="bc-type bc-type--podcast" data-t="podcast">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="6" r="2.5" stroke="currentColor" stroke-width="1.3" fill="none"/><path d="M5 9.5a4.5 4.5 0 006 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="8" y1="12" x2="8" y2="14" stroke="currentColor" stroke-width="1.3"/></svg>
+              <span>Podcast</span>
+            </button>
           </div>
         </div>
 
         <!-- Selected media preview -->
-        <div id="selected-media" class="selected-media hidden">
-          <img id="selected-img" src="" alt="">
-          <div class="selected-media-info">
-            <div class="selected-media-title" id="selected-title"></div>
-            <div class="selected-media-meta" id="selected-meta1"></div>
-            <div class="selected-media-meta" id="selected-meta2"></div>
-            <button class="selected-media-clear" id="clear-selection">✕ Clear selection</button>
+        <div id="selected-media" class="bc-selected hidden">
+          <div id="selected-cover" class="bc-selected__cover"></div>
+          <div class="bc-selected__info">
+            <div class="bc-selected__title" id="selected-title"></div>
+            <div class="bc-selected__meta"  id="selected-meta1"></div>
+            <div class="bc-selected__meta"  id="selected-meta2"></div>
+            <button class="bc-selected__clear" id="clear-selection">✕ Clear</button>
           </div>
         </div>
 
         <!-- Search -->
-        <div class="form-group" id="search-group">
-          <div class="form-label">Search</div>
-          <div class="search-wrap">
-            <input class="form-input" id="f-search" placeholder="Search for a title..." autocomplete="off">
-            <div class="search-results" id="search-results"></div>
+        <div class="bc-field" id="search-group">
+          <div class="bc-label">Search</div>
+          <div class="bc-search-wrap">
+            <input class="bc-input" id="f-search"
+              placeholder="Search books, shows, films, games…"
+              autocomplete="off" style="padding-left:42px">
+            <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--fg-3);pointer-events:none" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/><line x1="10.5" y1="10.5" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </span>
+            <div id="search-results" class="bc-search-drop hidden"></div>
           </div>
         </div>
 
-        <!-- Title (manual) -->
-        <div class="form-group" id="title-group">
-          <div class="form-label">Title</div>
-          <input class="form-input" id="f-title" placeholder="Title">
+        <!-- Title (manual fallback) -->
+        <div class="bc-field" id="title-group">
+          <div class="bc-label">Title</div>
+          <input class="bc-input" id="f-title" placeholder="Title">
         </div>
 
         <!-- Status -->
-        <div class="form-group">
-          <div class="form-label">Status</div>
-          <div class="status-wrap" id="status-btns">
-            <button class="status-btn" data-s="app.breadcrumbs.defs#wantTo">Want to</button>
-            <button class="status-btn active" data-s="app.breadcrumbs.defs#inProgress">In Progress</button>
-            <button class="status-btn" data-s="app.breadcrumbs.defs#completed">Completed</button>
-            <button class="status-btn" data-s="app.breadcrumbs.defs#abandoned">Abandoned</button>
-            <button class="status-btn" data-s="app.breadcrumbs.defs#onHold">On Hold</button>
+        <div class="bc-field">
+          <div class="bc-label">Status</div>
+          <div class="bc-status" id="status-btns">
+            <button class="bc-sbtn"          data-s="app.breadcrumbs.defs#wantTo">Want to</button>
+            <button class="bc-sbtn is-active" data-s="app.breadcrumbs.defs#inProgress">In Progress</button>
+            <button class="bc-sbtn"          data-s="app.breadcrumbs.defs#completed">Completed</button>
+            <button class="bc-sbtn"          data-s="app.breadcrumbs.defs#abandoned">Abandoned</button>
+            <button class="bc-sbtn"          data-s="app.breadcrumbs.defs#onHold">On Hold</button>
           </div>
         </div>
 
-        <!-- Progress (hidden when status = wantTo) -->
-        <div class="form-group" id="progress-group">
-          <div class="form-label">Progress</div>
+        <!-- Progress subforms -->
+        <div class="bc-field" id="progress-group">
+          <div class="bc-label">Progress</div>
 
           <div id="prog-book">
-            <div class="progress-row">
-              <input class="form-input" id="f-curr-page" type="number" min="0" placeholder="Page">
-              <span class="prog-sep">of</span>
-              <input class="form-input" id="f-total-pages" type="number" min="1" placeholder="Total pages">
+            <div class="bc-progrow">
+              <input class="bc-input" id="f-curr-page"   type="number" min="0" placeholder="Page">
+              <span class="bc-progrow__of">of</span>
+              <input class="bc-input" id="f-total-pages" type="number" min="1" placeholder="Total">
             </div>
           </div>
 
           <div id="prog-show" class="hidden">
-            <div class="progress-row">
-              <input class="form-input" id="f-season" type="number" min="1" placeholder="Season">
-              <input class="form-input" id="f-episode" type="number" min="1" placeholder="Episode">
+            <div class="bc-progrow">
+              <input class="bc-input" id="f-season"  type="number" min="1" placeholder="Season">
+              <input class="bc-input" id="f-episode" type="number" min="1" placeholder="Episode">
             </div>
           </div>
 
           <div id="prog-movie" class="hidden">
-            <p style="font-size:13px;color:var(--text3)">Status carries the progress for films. Nothing else needed.</p>
+            <p style="font-size:13px;color:var(--fg-3);font-style:italic;padding:4px 0">
+              Status carries the progress for films. Nothing else needed.
+            </p>
           </div>
 
           <div id="prog-game" class="hidden">
-            <div class="progress-row" style="margin-bottom:8px">
-              <input class="form-input" id="f-playtime" type="number" min="0" placeholder="Hours played">
-              <input class="form-input" id="f-completion" type="number" min="0" max="100" placeholder="% done">
+            <div class="bc-progrow" style="margin-bottom:8px">
+              <input class="bc-input" id="f-playtime"   type="number" min="0"   placeholder="Hours played">
+              <input class="bc-input" id="f-completion" type="number" min="0" max="100" placeholder="% done">
             </div>
-            <input class="form-input" id="f-narrative" placeholder="Where are you? (optional)" maxlength="128">
+            <input class="bc-input" id="f-narrative" placeholder="Where are you in the story? (optional)" maxlength="128">
           </div>
 
           <div id="prog-podcast" class="hidden">
-            <div class="progress-row">
-              <input class="form-input" id="f-ep-num" type="number" min="1" placeholder="Episode">
-              <input class="form-input" id="f-ep-pos" placeholder="Position (1:23:45)">
+            <div class="bc-progrow">
+              <input class="bc-input" id="f-ep-num" type="number" min="1" placeholder="Episode">
+              <input class="bc-input" id="f-ep-pos" placeholder="Position (1:23:45)">
             </div>
-          </div>
-        </div>
-
-        <!-- Genre -->
-        <div class="form-group">
-          <div class="form-label">Genre</div>
-          <div class="genres" id="genres">
-            <span class="genre" data-g="Sci-Fi">Sci-Fi</span>
-            <span class="genre" data-g="Fantasy">Fantasy</span>
-            <span class="genre" data-g="Drama">Drama</span>
-            <span class="genre" data-g="Thriller">Thriller</span>
-            <span class="genre" data-g="Comedy">Comedy</span>
-            <span class="genre" data-g="Horror">Horror</span>
-            <span class="genre" data-g="Romance">Romance</span>
-            <span class="genre" data-g="Action">Action</span>
-            <span class="genre" data-g="RPG">RPG</span>
-          </div>
-        </div>
-
-        <!-- Rating (shown when completed) -->
-        <div class="form-group" id="rating-group">
-          <div class="form-label">Rating</div>
-          <div class="stars" id="stars">
-            <span class="star" data-r="1">☆</span>
-            <span class="star" data-r="2">☆</span>
-            <span class="star" data-r="3">☆</span>
-            <span class="star" data-r="4">☆</span>
-            <span class="star" data-r="5">☆</span>
           </div>
         </div>
 
         <!-- Notes -->
-        <div class="form-group">
-          <div class="form-label">Notes</div>
-          <textarea class="form-input form-textarea" id="f-notes" placeholder="Thoughts, spoiler-free..."></textarea>
+        <div class="bc-field">
+          <div class="bc-label">
+            Notes
+            <span class="bc-label__hint">optional</span>
+          </div>
+          <textarea class="bc-textarea" id="f-notes" placeholder="Thoughts, spoiler-free…"></textarea>
         </div>
 
-        <button class="btn btn-primary" id="save-btn">Save Entry</button>
-        <button class="btn btn-danger hidden" id="delete-btn" style="margin-top:10px">🗑️ Delete</button>
+        <!-- Rating (shown when completed) -->
+        <div class="bc-field hidden" id="rating-group">
+          <div class="bc-label">Rating</div>
+          <div class="bc-stars" id="stars">
+            <button class="bc-star" data-r="1" aria-label="1 star">☆</button>
+            <button class="bc-star" data-r="2" aria-label="2 stars">☆</button>
+            <button class="bc-star" data-r="3" aria-label="3 stars">☆</button>
+            <button class="bc-star" data-r="4" aria-label="4 stars">☆</button>
+            <button class="bc-star" data-r="5" aria-label="5 stars">☆</button>
+          </div>
+        </div>
+
+        <!-- Delete (edit mode only) -->
+        <button class="bc-btn bc-btn--danger bc-btn--block hidden" id="delete-btn" style="margin-top:4px">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><line x1="3" y1="5" x2="13" y2="5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M6 5V4a1 1 0 011-1h2a1 1 0 011 1v1M7 8v4M9 8v4M4 5l1 8h6l1-8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Delete entry
+        </button>
+
+      </div><!-- /bc-modal__body -->
+
+      <div class="bc-modal__actions">
+        <button class="bc-btn bc-btn--secondary" id="modal-cancel">Cancel</button>
+        <button class="bc-btn bc-btn--primary"   id="save-btn">Save</button>
       </div>
+
+    </div><!-- /bc-modal -->
+  </div><!-- /entry-modal -->
+
+
+  <!-- ═══ AI / CATCH-ME-UP MODAL ══════════════════════════════ -->
+  <div class="bc-modal-bg" id="ai-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="ai-title">
+    <div class="bc-modal">
+      <div class="bc-modal__grip" aria-hidden="true"></div>
+
+      <div class="bc-modal__head">
+        <span class="bc-modal__title" id="ai-modal-head">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="var(--accent)" aria-hidden="true" style="margin-right:6px;vertical-align:-1px"><path d="M7 0l1.1 4.9L13 7l-4.9 1.1L7 14l-1.1-4.9L1 7l4.9-1.1z"/></svg>
+          <span id="ai-title">Catch me up</span>
+        </span>
+        <button class="bc-modal__close" id="ai-close" aria-label="Close">✕</button>
+      </div>
+
+      <div class="bc-modal__body">
+        <div id="ai-body" class="bc-ai-body"></div>
+      </div>
+
+      <div class="bc-ai-foot">Catch Me Up · Breadcrumbs</div>
+
     </div>
+  </div><!-- /ai-modal -->
+
+
+  <!-- ═══ UTILITY ══════════════════════════════════════════════ -->
+  <div id="toasts"
+    style="position:fixed;bottom:96px;left:50%;transform:translateX(-50%);z-index:2000;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:max-content;max-width:calc(100vw - 40px)">
   </div>
 
-  <!-- AI Modal -->
-  <div class="ai-modal" id="ai-modal">
-    <div class="ai-box">
-      <div class="ai-head">
-        <h3><span style="color:var(--accent)">✨</span> <span id="ai-title">Title</span></h3>
-        <button class="modal-close" id="ai-close">✕</button>
-      </div>
-      <div class="ai-body" id="ai-body"></div>
-      <div class="ai-foot">Catch Me Up · Breadcrumbs</div>
-    </div>
+  <div id="sync-indicator" class="bc-sync" style="display:none">
+    <div class="bc-spinner bc-spinner--sm"></div>
+    Syncing…
   </div>
 
-  <div class="toast-box" id="toasts"></div>
-  <div class="sync-indicator" id="sync-indicator"><div class="mini-spinner"></div> Syncing...</div>
-</div>
+</div><!-- /#app -->
 
-<script>
-// ========== CONFIG ==========
-var ATP_COLLECTIONS = {
-  book:    'app.breadcrumbs.book',
-  show:    'app.breadcrumbs.show',
-  movie:   'app.breadcrumbs.movie',
-  game:    'app.breadcrumbs.game',
-  podcast: 'app.breadcrumbs.podcast'
-};
-var ATP_LEGACY = 'app.breadcrumbs.entry';
-var DEFAULT_PDS = 'https://bsky.social';
-
-var STATUS = {
-  wantTo:     'app.breadcrumbs.defs#wantTo',
-  inProgress: 'app.breadcrumbs.defs#inProgress',
-  completed:  'app.breadcrumbs.defs#completed',
-  abandoned:  'app.breadcrumbs.defs#abandoned',
-  onHold:     'app.breadcrumbs.defs#onHold'
-};
-var STATUS_LABELS = {
-  'app.breadcrumbs.defs#wantTo':     'Want to',
-  'app.breadcrumbs.defs#inProgress': 'In Progress',
-  'app.breadcrumbs.defs#completed':  'Completed',
-  'app.breadcrumbs.defs#abandoned':  'Abandoned',
-  'app.breadcrumbs.defs#onHold':     'On Hold'
-};
-
-var icons  = {book:'📚', show:'📺', movie:'🎬', game:'🎮', podcast:'🎙️'};
-var labels = {book:'Book', show:'TV Show', movie:'Movie', game:'Game', podcast:'Podcast'};
-
-// Session state
-var session       = null;
-var entries       = [];
-var editRkey      = null;
-var editCollection = null;
-var selType       = 'book';
-var selGenre      = '';
-var selRating     = 0;
-var selStatus     = STATUS.inProgress;
-var selectedMedia = null;
-var searchTimeout = null;
-var isDemo        = false;
-
-var summaries = {
-  'Project Hail Mary':'<strong>Where you left off:</strong><br><br>Dr. Ryland Grace discovered he\'s not alone — he\'s made contact with <strong>Rocky</strong>, an alien from Erid. They\'re working together to save both planets.<br><br>You just discovered how Astrophage reproduces.',
-  'Severance':'<strong>Where you left off:</strong><br><br>Deep in the Lumon mystery. Helly is trying to escape. Mark found a secret map.<br><br>You stopped right before the <strong>waffle party</strong>.',
-  'Oppenheimer':'<strong>Where you left off:</strong><br><br>You just witnessed the <strong>Trinity test</strong>. The Manhattan Project succeeded.',
-  "Baldur's Gate 3":'<strong>Where you left off:</strong><br><br>Playing as <strong>Dark Urge</strong> in Act 2. Moonrise Towers. Jaheira joined you.'
-};
-
-function $(id){return document.getElementById(id)}
-function $$(s){return document.querySelectorAll(s)}
-
-// ========== AT PROTOCOL API ==========
-
-async function atpRequest(method, endpoint, body, pds) {
-  var url = (pds || session?.pds || DEFAULT_PDS) + '/xrpc/' + endpoint;
-  var headers = {'Content-Type': 'application/json'};
-  if (session?.accessJwt) headers['Authorization'] = 'Bearer ' + session.accessJwt;
-  var opts = {method: method, headers: headers};
-  if (body && method !== 'GET') opts.body = JSON.stringify(body);
-  var res = await fetch(url, opts);
-  var data = await res.json();
-  if (!res.ok) throw new Error(data.message || data.error || 'Request failed');
-  return data;
-}
-
-async function atpLogin(handle, password) {
-  var pds = DEFAULT_PDS;
-  var data = await atpRequest('POST', 'com.atproto.server.createSession', {identifier: handle, password: password}, pds);
-  session = {did: data.did, handle: data.handle, accessJwt: data.accessJwt, refreshJwt: data.refreshJwt, pds: pds};
-  localStorage.setItem('bc_atp_session', JSON.stringify(session));
-  return session;
-}
-
-async function atpRefreshSession() {
-  if (!session?.refreshJwt) return false;
-  try {
-    var data = await atpRequest('POST', 'com.atproto.server.refreshSession', {});
-    session.accessJwt = data.accessJwt;
-    session.refreshJwt = data.refreshJwt;
-    localStorage.setItem('bc_atp_session', JSON.stringify(session));
-    return true;
-  } catch(e) { return false; }
-}
-
-async function atpGetEntries() {
-  showSync(true);
-  try {
-    var cols = [...Object.values(ATP_COLLECTIONS), ATP_LEGACY];
-    var results = await Promise.allSettled(cols.map(function(col) {
-      return atpRequest('GET', 'com.atproto.repo.listRecords?repo=' + encodeURIComponent(session.did) + '&collection=' + col + '&limit=100')
-        .then(function(d) { return {col: col, records: d.records || []}; });
-    }));
-
-    entries = [];
-    results.forEach(function(r) {
-      if (r.status !== 'fulfilled') return;
-      r.value.records.forEach(function(rec) {
-        entries.push(normalizeRecord(rec, r.value.col));
-      });
-    });
-
-    // Deduplicate by URI (legacy + new collections may overlap during migration)
-    var seen = new Set();
-    entries = entries.filter(function(e) {
-      if (seen.has(e.uri)) return false;
-      seen.add(e.uri);
-      return true;
-    });
-
-    entries.sort(function(a, b) { return new Date(b.createdAt) - new Date(a.createdAt); });
-    showSync(false);
-    return entries;
-  } catch(e) {
-    showSync(false);
-    if (e.message.includes('expired') || e.message.includes('Invalid')) {
-      var ok = await atpRefreshSession();
-      if (ok) return atpGetEntries();
-    }
-    throw e;
-  }
-}
-
-function normalizeRecord(rec, collection) {
-  var val = rec.value;
-  var rkey = rec.uri.split('/').pop();
-
-  // Derive type from collection; fall back to legacy type field
-  var type = Object.entries(ATP_COLLECTIONS).find(function(e) { return e[1] === collection; });
-  type = type ? type[0] : (val.type === 'tv' ? 'show' : val.type || 'book');
-
-  // Normalize legacy scalar fields to arrays
-  var authors = val.authors || (val.author ? [val.author] : undefined);
-  var genres  = val.genres  || (val.genre  ? [val.genre]  : undefined);
-
-  // Infer status for legacy records that didn't store it
-  var status = val.status || (val.progress ? STATUS.inProgress : STATUS.wantTo);
-
-  // Legacy string progress stays as-is; structured objects pass through
-  var progress = val.progress || null;
-
-  return Object.assign({}, val, {
-    type: type,
-    authors: authors,
-    genres: genres,
-    status: status,
-    progress: progress,
-    rkey: rkey,
-    uri: rec.uri,
-    collection: collection
-  });
-}
-
-function buildRecord(entry, collection) {
-  var rec = {$type: collection};
-  if (entry.title)            rec.title    = entry.title;
-  if (entry.status)           rec.status   = entry.status;
-  if (entry.notes)            rec.notes    = entry.notes;
-  if (entry.rating)           rec.rating   = entry.rating;
-  if (entry.coverUrl)         rec.coverUrl = entry.coverUrl;
-  if (entry.genres?.length)   rec.genres   = entry.genres;
-  if (entry.progress)         rec.progress = entry.progress;
-  if (entry.identifiers)      rec.identifiers = entry.identifiers;
-  if (entry.startedAt)        rec.startedAt   = entry.startedAt;
-  if (entry.finishedAt)       rec.finishedAt  = entry.finishedAt;
-  if (entry.watchedAt)        rec.watchedAt   = entry.watchedAt;
-  if (entry.type === 'book'    && entry.authors?.length) rec.authors    = entry.authors;
-  if (entry.type === 'game'    && entry.developer)       rec.developer  = entry.developer;
-  if (entry.type === 'podcast' && entry.creator)         rec.creator    = entry.creator;
-  return rec;
-}
-
-async function atpCreateEntry(entry) {
-  showSync(true);
-  try {
-    var collection = ATP_COLLECTIONS[entry.type] || ATP_COLLECTIONS.book;
-    var record = buildRecord(entry, collection);
-    record.createdAt = new Date().toISOString();
-    var data = await atpRequest('POST', 'com.atproto.repo.createRecord', {
-      repo: session.did, collection: collection, record: record
-    });
-    showSync(false);
-    return data;
-  } catch(e) { showSync(false); throw e; }
-}
-
-async function atpUpdateEntry(rkey, collection, entry) {
-  showSync(true);
-  try {
-    var newCollection = ATP_COLLECTIONS[entry.type] || ATP_COLLECTIONS.book;
-
-    if (collection !== newCollection) {
-      // Type changed — delete from old collection, create in new
-      await atpDeleteEntry(rkey, collection);
-      var created = await atpCreateEntry(entry);
-      showSync(false);
-      return created;
-    }
-
-    // Same collection — putRecord preserves the rkey and AT-URI
-    var record = buildRecord(entry, collection);
-    var original = entries.find(function(e) { return e.rkey === rkey && e.collection === collection; });
-    record.createdAt = (original && original.createdAt) || new Date().toISOString();
-
-    var data = await atpRequest('POST', 'com.atproto.repo.putRecord', {
-      repo: session.did, collection: collection, rkey: rkey, record: record
-    });
-    showSync(false);
-    return data;
-  } catch(e) { showSync(false); throw e; }
-}
-
-async function atpDeleteEntry(rkey, collection) {
-  showSync(true);
-  try {
-    await atpRequest('POST', 'com.atproto.repo.deleteRecord', {
-      repo: session.did, collection: collection || ATP_LEGACY, rkey: rkey
-    });
-    showSync(false);
-  } catch(e) { showSync(false); throw e; }
-}
-
-function showSync(show) { $('sync-indicator').classList.toggle('active', show); }
-
-// ========== INIT ==========
-
-function init() {
-  $('demo-btn').onclick    = startDemo;
-  $('signin-btn').onclick  = signIn;
-  $('add-btn').onclick     = openAdd;
-  $('modal-close').onclick = closeModal;
-  $('entry-modal').onclick = function(e){ if(e.target.id==='entry-modal') closeModal(); };
-  $('save-btn').onclick    = saveEntry;
-  $('delete-btn').onclick  = deleteEntry;
-  $('ai-close').onclick    = closeAI;
-  $('ai-modal').onclick    = function(e){ if(e.target.id==='ai-modal') closeAI(); };
-  $('export-btn').onclick  = exportData;
-  $('refresh-btn').onclick = refreshEntries;
-  $('logout-btn').onclick  = logout;
-  $('clear-selection').onclick = clearSelection;
-
-  $('f-search').oninput = function() {
-    clearTimeout(searchTimeout);
-    var q = this.value.trim();
-    if (q.length < 2) { $('search-results').classList.remove('active'); return; }
-    searchTimeout = setTimeout(function(){ searchMedia(q); }, 400);
-  };
-  $('f-search').onfocus = function() { if (this.value.length >= 2) $('search-results').classList.add('active'); };
-
-  $$('.tab').forEach(function(t){ t.onclick = function(){ switchTab(t.dataset.tab); }; });
-  $$('.type-btn').forEach(function(b){ b.onclick = function(){ pickType(b.dataset.t); }; });
-  $$('.genre').forEach(function(g){ g.onclick = function(){ pickGenre(g.dataset.g); }; });
-  $$('.star').forEach(function(s){ s.onclick = function(){ pickRating(+s.dataset.r); }; });
-  $$('.status-btn').forEach(function(b){ b.onclick = function(){ pickStatus(b.dataset.s); }; });
-
-  document.addEventListener('click', function(e) {
-    if (!e.target.closest('.search-wrap')) $('search-results').classList.remove('active');
-  });
-
-  var savedSession = localStorage.getItem('bc_atp_session');
-  if (savedSession) {
-    try {
-      session = JSON.parse(savedSession);
-      isDemo = false;
-      showMain();
-      loadEntries();
-    } catch(e) { localStorage.removeItem('bc_atp_session'); }
-  }
-
-  var demoMode = localStorage.getItem('bc_demo_mode');
-  if (demoMode) { isDemo = true; showMain(); loadDemoEntries(); }
-}
-
-// ========== AUTH ==========
-
-async function signIn() {
-  var handle = $('auth-handle').value.trim();
-  var password = $('auth-password').value;
-  var errorEl = $('auth-error');
-  if (!handle || !password) {
-    errorEl.textContent = 'Please enter your handle and app password';
-    errorEl.classList.add('show'); return;
-  }
-  if (!handle.includes('.')) handle = handle + '.bsky.social';
-  errorEl.classList.remove('show');
-  $('signin-btn').textContent = 'Signing in...';
-  $('signin-btn').disabled = true;
-  try {
-    await atpLogin(handle, password);
-    isDemo = false;
-    localStorage.removeItem('bc_demo_mode');
-    showMain();
-    await loadEntries();
-    toast('Signed in as @' + session.handle);
-  } catch(e) {
-    errorEl.textContent = e.message || 'Sign in failed. Check your handle and app password.';
-    errorEl.classList.add('show');
-  } finally {
-    $('signin-btn').textContent = '🦋 Sign in with Bluesky';
-    $('signin-btn').disabled = false;
-  }
-}
-
-function startDemo() {
-  isDemo = true; session = null;
-  localStorage.setItem('bc_demo_mode', 'true');
-  showMain(); loadDemoEntries();
-  toast('Welcome to Breadcrumbs!');
-}
-
-function logout() {
-  session = null; isDemo = false; entries = [];
-  localStorage.removeItem('bc_atp_session');
-  localStorage.removeItem('bc_demo_mode');
-  localStorage.removeItem('bc_demo_entries');
-  $('auth-screen').classList.add('active');
-  $('main-screen').classList.remove('active');
-  $('auth-error').classList.remove('show');
-  $('auth-handle').value = ''; $('auth-password').value = '';
-  toast('Signed out');
-}
-
-function showMain() {
-  $('auth-screen').classList.remove('active');
-  $('main-screen').classList.add('active');
-  if (session) {
-    $('user-handle').textContent = '@' + session.handle;
-    $('user-did').textContent = session.did;
-    $('user-badge').style.display = 'block';
-    $('atp-badge').style.display = 'inline';
-    $('avatar').textContent = session.handle[0].toUpperCase();
-    $('demo-banner').classList.add('hidden');
-  } else {
-    $('user-handle').textContent = 'Demo User';
-    $('user-did').textContent = 'Local storage only';
-    $('user-badge').style.display = 'none';
-    $('atp-badge').style.display = 'none';
-    $('avatar').textContent = 'D';
-    $('demo-banner').classList.remove('hidden');
-  }
-}
-
-// ========== DATA ==========
-
-async function loadEntries() {
-  $('loading-entries').classList.remove('hidden');
-  $('entries').innerHTML = '';
-  $('empty').classList.add('hidden');
-  try {
-    await atpGetEntries();
-    render(); updateStats();
-  } catch(e) {
-    toast('Failed to load entries: ' + e.message, 'error');
-    render();
-  } finally {
-    $('loading-entries').classList.add('hidden');
-  }
-}
-
-function loadDemoEntries() {
-  var saved = localStorage.getItem('bc_demo_entries');
-  if (saved) {
-    entries = JSON.parse(saved);
-  } else {
-    var now = Date.now();
-    entries = [
-      {rkey:'1',collection:'app.breadcrumbs.book',type:'book',title:'Project Hail Mary',authors:['Andy Weir'],progress:{currentPage:284,totalPages:476,updatedAt:new Date(now-2*86400000).toISOString()},status:STATUS.inProgress,genres:['Sci-Fi'],rating:5,notes:'Rocky is amazing.',coverUrl:'https://covers.openlibrary.org/b/isbn/9780593135204-M.jpg',createdAt:new Date(now-2*86400000).toISOString()},
-      {rkey:'2',collection:'app.breadcrumbs.show',type:'show',title:'Severance',progress:{season:1,episode:7,updatedAt:new Date(now-4*86400000).toISOString()},status:STATUS.inProgress,genres:['Thriller'],rating:5,notes:'Waffle party coming up.',coverUrl:'https://image.tmdb.org/t/p/w200/lFf6LLrQjYZKqiPuqcvzL8Fmgmt.jpg',createdAt:new Date(now-4*86400000).toISOString()},
-      {rkey:'3',collection:'app.breadcrumbs.movie',type:'movie',title:'Oppenheimer',status:STATUS.completed,genres:['Drama'],rating:4,notes:'Trinity test was incredible.',coverUrl:'https://image.tmdb.org/t/p/w200/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg',watchedAt:new Date(now-6*86400000).toISOString(),createdAt:new Date(now-6*86400000).toISOString()},
-      {rkey:'4',collection:'app.breadcrumbs.game',type:'game',title:"Baldur's Gate 3",developer:'Larian Studios',progress:{playtimeMinutes:2520,completionPercent:42,narrativePosition:'Act 2 — Moonrise Towers',updatedAt:new Date(now-9*86400000).toISOString()},status:STATUS.inProgress,genres:['RPG'],rating:5,notes:'Dark Urge playthrough.',coverUrl:'https://media.rawg.io/media/games/699/69907ecf13f172e9e1069ff7a9fd7544.jpg',createdAt:new Date(now-9*86400000).toISOString()}
-    ];
-    saveDemoEntries();
-  }
-  render(); updateStats();
-}
-
-function saveDemoEntries() { localStorage.setItem('bc_demo_entries', JSON.stringify(entries)); }
-
-async function refreshEntries() {
-  if (isDemo) { toast('Demo mode — no server to refresh from'); return; }
-  await loadEntries(); toast('Refreshed from PDS');
-}
-
-// ========== RENDER ==========
-
-function formatProgress(entry) {
-  var p = entry.progress;
-  if (!p) return null;
-  if (typeof p === 'string') return p; // legacy
-
-  var t = entry.type;
-  if (t === 'book') {
-    if (p.currentPage && p.totalPages) return 'p. ' + p.currentPage + ' / ' + p.totalPages;
-    if (p.currentPage) return 'p. ' + p.currentPage;
-    if (p.positionSeconds) return fmtSecs(p.positionSeconds);
-    if (p.currentChapter) return 'Ch. ' + p.currentChapter + (p.totalChapters ? ' / ' + p.totalChapters : '');
-    return null;
-  }
-  if (t === 'show') {
-    var parts = [];
-    if (p.season)   parts.push('S' + p.season);
-    if (p.episode)  parts.push('E' + p.episode);
-    return parts.join(' ') || null;
-  }
-  if (t === 'movie') {
-    return p.positionSeconds ? fmtSecs(p.positionSeconds) : null;
-  }
-  if (t === 'game') {
-    var gparts = [];
-    if (p.playtimeMinutes) gparts.push(Math.round(p.playtimeMinutes / 60) + 'h played');
-    if (p.completionPercent) gparts.push(p.completionPercent + '%');
-    if (p.narrativePosition) gparts.push(p.narrativePosition);
-    return gparts.join(' · ') || null;
-  }
-  if (t === 'podcast') {
-    var pparts = [];
-    if (p.episodeNumber) pparts.push('Ep ' + p.episodeNumber);
-    if (p.positionSeconds) pparts.push(fmtSecs(p.positionSeconds));
-    return pparts.join(' · ') || null;
-  }
-  return null;
-}
-
-function fmtSecs(s) {
-  var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
-  if (h > 0) return h + ':' + String(m).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
-  return m + ':' + String(sec).padStart(2,'0');
-}
-
-function parseSecs(str) {
-  if (!str) return null;
-  var p = str.split(':').map(Number);
-  if (p.length === 2) return p[0] * 60 + p[1];
-  if (p.length === 3) return p[0] * 3600 + p[1] * 60 + p[2];
-  return null;
-}
-
-function render() {
-  var list = $('entries'), empty = $('empty');
-  if (!entries.length) { list.innerHTML = ''; empty.classList.remove('hidden'); return; }
-  empty.classList.add('hidden');
-
-  list.innerHTML = entries.map(function(e) {
-    var coverHtml = e.coverUrl || e.cover
-      ? '<img class="card-cover" src="' + (e.coverUrl || e.cover) + '" alt="" onerror="this.style.display=\'none\'">'
-      : '<div class="card-icon ' + e.type + '">' + (icons[e.type] || '📦') + '</div>';
-
-    var subtitle = (e.authors || []).join(', ') || e.creator || e.developer || '';
-    var prog = formatProgress(e);
-    var statusStr = e.status !== STATUS.inProgress ? STATUS_LABELS[e.status] || '' : '';
-
-    return '<div class="card"><div class="card-main">'
-      + '<div class="card-accent ' + e.type + '"></div>'
-      + coverHtml
-      + '<div class="card-info">'
-      + '<div class="card-meta"><span class="card-type ' + e.type + '">' + (labels[e.type] || e.type) + '</span><span class="card-date">' + fmtDate(e.createdAt) + '</span></div>'
-      + '<div class="card-title">' + esc(e.title) + '</div>'
-      + (subtitle ? '<div class="card-subtitle">' + esc(subtitle) + '</div>' : '')
-      + (prog     ? '<div class="card-progress">📍 ' + esc(prog) + '</div>' : '')
-      + (statusStr ? '<div class="card-status">' + esc(statusStr) + '</div>' : '')
-      + (e.notes  ? '<div class="card-notes">' + esc(e.notes) + '</div>' : '')
-      + '</div></div>'
-      + '<div class="card-actions">'
-      + '<button class="card-action" onclick="openEdit(\'' + esc(e.rkey) + '\',\'' + esc(e.collection) + '\')">✏️ Edit</button>'
-      + '<button class="card-action accent" onclick="showAI(\'' + esc(e.rkey) + '\')">✨ Catch me up</button>'
-      + '</div></div>';
-  }).join('');
-}
-
-function fmtDate(ts) {
-  var d = new Date(ts), now = new Date();
-  var diff = Math.floor((now - d) / 86400000);
-  if (diff === 0) return 'Today';
-  if (diff === 1) return 'Yesterday';
-  if (diff < 7) return diff + 'd ago';
-  return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' ' + d.getDate();
-}
-
-function esc(s) {
-  if (!s) return '';
-  var d = document.createElement('div'); d.textContent = s; return d.innerHTML;
-}
-
-function switchTab(tab) {
-  $$('.tab').forEach(function(t){ t.classList.toggle('active', t.dataset.tab === tab); });
-  $$('.tab-panel').forEach(function(p){ p.classList.toggle('active', p.id === tab + '-panel'); });
-  if (tab === 'analytics') updateStats();
-}
-
-// ========== MODAL ==========
-
-function openAdd() {
-  editRkey = null; editCollection = null; selectedMedia = null;
-  $('modal-title').textContent = 'New Entry';
-  $('f-title').value = ''; $('f-notes').value = ''; $('f-search').value = '';
-  $('delete-btn').classList.add('hidden');
-  $('selected-media').classList.add('hidden');
-  $('search-group').classList.remove('hidden');
-  selGenre = ''; selRating = 0;
-  pickType('book');
-  pickStatus(STATUS.inProgress);
-  updateGenres(); updateStars();
-  $('entry-modal').classList.add('active');
-}
-
-function openEdit(rkey, collection) {
-  var e = entries.find(function(x){ return x.rkey === rkey && x.collection === collection; });
-  if (!e) return;
-
-  editRkey = rkey; editCollection = collection; selectedMedia = null;
-  $('modal-title').textContent = 'Edit Entry';
-  $('f-title').value  = e.title || '';
-  $('f-notes').value  = e.notes || '';
-  $('f-search').value = '';
-  $('delete-btn').classList.remove('hidden');
-
-  if (e.coverUrl || e.cover) {
-    var url = e.coverUrl || e.cover;
-    selectedMedia = {title: e.title, coverUrl: url};
-    $('selected-media').classList.remove('hidden');
-    $('selected-img').src = url;
-    $('selected-title').textContent = e.title;
-    $('selected-meta1').textContent = (e.authors || []).join(', ') || e.creator || e.developer || '';
-    $('selected-meta2').textContent = '';
-    $('search-group').classList.add('hidden');
-  } else {
-    $('selected-media').classList.add('hidden');
-    $('search-group').classList.remove('hidden');
-  }
-
-  selGenre  = (e.genres && e.genres[0]) || '';
-  selRating = e.rating || 0;
-  pickType(e.type);
-  pickStatus(e.status || STATUS.inProgress);
-  populateProgressFields(e);
-  updateGenres(); updateStars();
-  $('entry-modal').classList.add('active');
-}
-
-function closeModal() { $('entry-modal').classList.remove('active'); }
-
-function pickType(t) {
-  selType = t;
-  $$('.type-btn').forEach(function(b){
-    b.classList.toggle('active', b.dataset.t === t);
-  });
-  // Show correct progress subform
-  ['book','show','movie','game','podcast'].forEach(function(mt) {
-    var el = $('prog-' + mt);
-    if (el) el.classList.toggle('hidden', mt !== t);
-  });
-  if (!editRkey) clearProgressFields();
-}
-
-function pickStatus(s) {
-  selStatus = s;
-  $$('.status-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.s === s); });
-  // Hide progress when wantTo
-  $('progress-group').classList.toggle('hidden', s === STATUS.wantTo);
-  // Show rating only when completed
-  $('rating-group').classList.toggle('hidden', s !== STATUS.completed);
-}
-
-function pickGenre(g) { selGenre = selGenre === g ? '' : g; updateGenres(); }
-function updateGenres() { $$('.genre').forEach(function(el){ el.classList.toggle('active', el.dataset.g === selGenre); }); }
-function pickRating(r) { selRating = selRating === r ? 0 : r; updateStars(); }
-function updateStars() { $$('.star').forEach(function(s){ s.textContent = +s.dataset.r <= selRating ? '⭐' : '☆'; }); }
-
-function clearProgressFields() {
-  ['f-curr-page','f-total-pages','f-season','f-episode',
-   'f-playtime','f-completion','f-narrative','f-ep-num','f-ep-pos'].forEach(function(id) {
-    var el = $(id); if (el) el.value = '';
-  });
-}
-
-function populateProgressFields(entry) {
-  clearProgressFields();
-  var p = entry.progress;
-  if (!p || typeof p === 'string') return; // legacy string — leave blank
-  var t = entry.type;
-  if (t === 'book') {
-    if ($('f-curr-page'))  $('f-curr-page').value  = p.currentPage  || '';
-    if ($('f-total-pages')) $('f-total-pages').value = p.totalPages || '';
-  } else if (t === 'show') {
-    if ($('f-season'))  $('f-season').value  = p.season  || '';
-    if ($('f-episode')) $('f-episode').value = p.episode || '';
-  } else if (t === 'game') {
-    if ($('f-playtime'))    $('f-playtime').value    = p.playtimeMinutes ? Math.round(p.playtimeMinutes / 60) : '';
-    if ($('f-completion'))  $('f-completion').value  = p.completionPercent || '';
-    if ($('f-narrative'))   $('f-narrative').value   = p.narrativePosition || '';
-  } else if (t === 'podcast') {
-    if ($('f-ep-num')) $('f-ep-num').value = p.episodeNumber || '';
-    if ($('f-ep-pos')) $('f-ep-pos').value = p.positionSeconds ? fmtSecs(p.positionSeconds) : '';
-  }
-}
-
-function buildProgressObject(type) {
-  var now = new Date().toISOString();
-  if (type === 'book') {
-    var cp = parseInt($('f-curr-page').value) || null;
-    var tp = parseInt($('f-total-pages').value) || null;
-    return (cp || tp) ? {currentPage: cp, totalPages: tp, updatedAt: now} : null;
-  }
-  if (type === 'show') {
-    var ep = parseInt($('f-episode').value) || null;
-    if (!ep) return null;
-    var sn = parseInt($('f-season').value) || null;
-    return {season: sn, episode: ep, updatedAt: now};
-  }
-  if (type === 'movie') return null;
-  if (type === 'game') {
-    var pt = parseFloat($('f-playtime').value);
-    var pm = (!isNaN(pt) && pt > 0) ? Math.round(pt * 60) : null;
-    var pc = parseInt($('f-completion').value) || null;
-    var np = $('f-narrative').value.trim() || null;
-    return (pm || pc || np) ? {playtimeMinutes: pm, completionPercent: pc, narrativePosition: np, updatedAt: now} : null;
-  }
-  if (type === 'podcast') {
-    var en = parseInt($('f-ep-num').value) || null;
-    var ps = parseSecs($('f-ep-pos').value.trim()) || null;
-    return (en || ps) ? {episodeNumber: en, positionSeconds: ps, updatedAt: now} : null;
-  }
-  return null;
-}
-
-async function saveEntry() {
-  var title = $('f-title').value.trim();
-  if (!title) { toast('Title is required', 'error'); return; }
-
-  var entryData = {
-    type:     selType,
-    title:    title,
-    status:   selStatus,
-    progress: selStatus !== STATUS.wantTo ? buildProgressObject(selType) : null,
-    notes:    $('f-notes').value.trim() || null,
-    genres:   selGenre ? [selGenre] : null,
-    rating:   selRating || null,
-    coverUrl: selectedMedia?.coverUrl || null,
-    authors:  selectedMedia?.authors || null,
-    creator:  selectedMedia?.creator || null,
-    developer: selectedMedia?.developer || null
-  };
-
-  $('save-btn').textContent = 'Saving...'; $('save-btn').disabled = true;
-
-  try {
-    if (isDemo) {
-      if (editRkey) {
-        var idx = entries.findIndex(function(e){ return e.rkey === editRkey; });
-        if (idx >= 0) entries[idx] = Object.assign({}, entries[idx], entryData);
-      } else {
-        entryData.rkey = Date.now().toString();
-        entryData.collection = ATP_COLLECTIONS[selType] || ATP_COLLECTIONS.book;
-        entryData.createdAt  = new Date().toISOString();
-        entries.unshift(entryData);
-      }
-      saveDemoEntries();
-      toast(editRkey ? 'Entry updated!' : 'Entry saved!');
-    } else {
-      if (editRkey && editCollection) {
-        await atpUpdateEntry(editRkey, editCollection, entryData);
-        toast('Entry updated!');
-      } else {
-        await atpCreateEntry(entryData);
-        toast('Entry saved to your PDS!');
-      }
-      await atpGetEntries();
-    }
-    render(); updateStats(); closeModal();
-  } catch(e) {
-    toast('Save failed: ' + e.message, 'error');
-  } finally {
-    $('save-btn').textContent = 'Save Entry'; $('save-btn').disabled = false;
-  }
-}
-
-async function deleteEntry() {
-  if (!editRkey) return;
-  $('delete-btn').textContent = 'Deleting...'; $('delete-btn').disabled = true;
-  try {
-    if (isDemo) {
-      entries = entries.filter(function(e){ return e.rkey !== editRkey; });
-      saveDemoEntries();
-    } else {
-      await atpDeleteEntry(editRkey, editCollection);
-      await atpGetEntries();
-    }
-    render(); updateStats(); closeModal();
-    toast('Entry deleted');
-  } catch(e) {
-    toast('Delete failed: ' + e.message, 'error');
-  } finally {
-    $('delete-btn').textContent = '🗑️ Delete'; $('delete-btn').disabled = false;
-  }
-}
-
-// ========== SEARCH ==========
-
-function searchMedia(query) {
-  var results = $('search-results');
-  results.innerHTML = '<div class="search-loading">Searching...</div>';
-  results.classList.add('active');
-  if      (selType === 'book')    searchBooks(query);
-  else if (selType === 'show')    searchTMDB(query, 'tv');
-  else if (selType === 'movie')   searchTMDB(query, 'movie');
-  else if (selType === 'game')    searchGames(query);
-  else results.innerHTML = '<div class="search-empty">Manual entry only for this type.</div>';
-}
-
-function searchTMDB(query, type) {
-  fetch('/api/tmdb?query=' + encodeURIComponent(query) + '&type=' + type)
-  .then(function(r){ if (!r.ok) throw new Error(r.status); return r.json(); })
-  .then(function(data) {
-    var results = $('search-results');
-    if (!data.results?.length) { results.innerHTML = '<div class="search-empty">No results found</div>'; return; }
-    results.innerHTML = data.results.slice(0,6).map(function(item) {
-      var title = item.title || item.name;
-      var year  = (item.release_date || item.first_air_date || '').slice(0,4);
-      var poster = item.poster_path ? 'https://image.tmdb.org/t/p/w92' + item.poster_path : '';
-      var cover  = item.poster_path ? 'https://image.tmdb.org/t/p/w200' + item.poster_path : '';
-      return '<div class="search-item" data-title="' + esc(title) + '" data-year="' + year + '" data-cover="' + cover + '">'
-        + (poster ? '<img src="' + poster + '">' : '<div style="width:45px;height:65px;background:var(--bg);border-radius:6px;display:flex;align-items:center;justify-content:center">' + icons[selType] + '</div>')
-        + '<div class="search-item-info"><div class="search-item-title">' + esc(title) + '</div><div class="search-item-meta">' + year + '</div></div></div>';
-    }).join('');
-    results.querySelectorAll('.search-item').forEach(function(item){ item.onclick = function(){ selectResult(this); }; });
-  })
-  .catch(function(){ $('search-results').innerHTML = '<div class="search-empty">Search unavailable. Enter title manually.</div>'; });
-}
-
-function searchBooks(query) {
-  fetch('https://www.googleapis.com/books/v1/volumes?q=' + encodeURIComponent(query) + '&maxResults=6')
-  .then(function(r){ if (!r.ok) throw new Error(r.status); return r.json(); })
-  .then(function(data) {
-    var results = $('search-results');
-    if (!data.items?.length) { results.innerHTML = '<div class="search-empty">No results found</div>'; return; }
-    results.innerHTML = data.items.map(function(item) {
-      var v = item.volumeInfo;
-      var title  = v.title || 'Unknown';
-      var author = (v.authors || []).join(', ') || '';
-      var cover  = v.imageLinks?.thumbnail || v.imageLinks?.smallThumbnail || '';
-      var thumb  = v.imageLinks?.smallThumbnail || '';
-      var isbn   = (v.industryIdentifiers || []).find(function(x){ return x.type === 'ISBN_13'; });
-      return '<div class="search-item" data-title="' + esc(title) + '" data-author="' + esc(author) + '" data-cover="' + esc(cover) + '" data-isbn13="' + (isbn ? isbn.identifier : '') + '">'
-        + (thumb ? '<img src="' + thumb + '">' : '<div style="width:45px;height:65px;background:var(--bg);border-radius:6px;display:flex;align-items:center;justify-content:center">📚</div>')
-        + '<div class="search-item-info"><div class="search-item-title">' + esc(title) + '</div><div class="search-item-meta">' + esc(author) + '</div></div></div>';
-    }).join('');
-    results.querySelectorAll('.search-item').forEach(function(item){ item.onclick = function(){ selectResult(this); }; });
-  })
-  .catch(function(){ $('search-results').innerHTML = '<div class="search-empty">Search unavailable. Enter title manually.</div>'; });
-}
-
-function searchGames(query) {
-  fetch('/api/rawg?query=' + encodeURIComponent(query))
-  .then(function(r){ if (!r.ok) throw new Error(r.status); return r.json(); })
-  .then(function(data) {
-    var results = $('search-results');
-    if (!data.results?.length) { results.innerHTML = '<div class="search-empty">No results found</div>'; return; }
-    results.innerHTML = data.results.map(function(item) {
-      var year = (item.released || '').slice(0,4);
-      return '<div class="search-item" data-title="' + esc(item.name) + '" data-year="' + year + '" data-cover="' + esc(item.background_image || '') + '">'
-        + (item.background_image ? '<img src="' + item.background_image + '">' : '<div style="width:45px;height:65px;background:var(--bg);border-radius:6px;display:flex;align-items:center;justify-content:center">🎮</div>')
-        + '<div class="search-item-info"><div class="search-item-title">' + esc(item.name) + '</div><div class="search-item-meta">' + year + '</div></div></div>';
-    }).join('');
-    results.querySelectorAll('.search-item').forEach(function(item){ item.onclick = function(){ selectResult(this); }; });
-  })
-  .catch(function(){ $('search-results').innerHTML = '<div class="search-empty">Search unavailable. Enter title manually.</div>'; });
-}
-
-function selectResult(el) {
-  var d = el.dataset;
-  selectedMedia = {
-    title:    d.title   || '',
-    coverUrl: d.cover   || '',
-    authors:  d.author  ? [d.author] : null,
-    isbn13:   d.isbn13  || null
-  };
-  $('selected-media').classList.remove('hidden');
-  $('selected-img').src = selectedMedia.coverUrl;
-  $('selected-img').style.display = selectedMedia.coverUrl ? 'block' : 'none';
-  $('selected-title').textContent = selectedMedia.title;
-  $('selected-meta1').textContent = d.author || d.year || '';
-  $('selected-meta2').textContent = '';
-  $('f-title').value = selectedMedia.title;
-  $('f-search').value = '';
-  $('search-results').classList.remove('active');
-  $('search-group').classList.add('hidden');
-}
-
-function clearSelection() {
-  selectedMedia = null;
-  $('selected-media').classList.add('hidden');
-  $('search-group').classList.remove('hidden');
-  $('f-title').value = ''; $('f-search').value = '';
-}
-
-// ========== AI ==========
-
-function showAI(rkey) {
-  var e = entries.find(function(x){ return x.rkey === rkey; });
-  if (!e) return;
-  $('ai-title').textContent = e.title;
-  $('ai-body').innerHTML = '<div class="spinner"></div><p style="text-align:center;color:var(--text2)">Generating summary...</p>';
-  $('ai-modal').classList.add('active');
-  setTimeout(function() {
-    var prog = formatProgress(e);
-    var fallback = '<strong>Where you left off in ' + esc(e.title) + ':</strong><br><br>'
-      + (prog ? 'You\'re at <strong>' + esc(prog) + '</strong>.<br><br>' : '')
-      + (e.notes ? 'Your notes: "' + esc(e.notes) + '"<br><br>' : '')
-      + 'This is a demo. A connected AI endpoint would give you a detailed, spoiler-free recap.';
-    $('ai-body').innerHTML = '<div class="ai-text">' + (summaries[e.title] || fallback) + '</div>';
-  }, 1200);
-}
-
-function closeAI() { $('ai-modal').classList.remove('active'); }
-
-// ========== STATS ==========
-
-function updateStats() {
-  $('total-count').textContent = entries.length + ' Entries';
-  var counts = {book:0, show:0, movie:0, game:0, podcast:0};
-  var genreCounts = {};
-  entries.forEach(function(e) {
-    if (counts.hasOwnProperty(e.type)) counts[e.type]++;
-    var g = (e.genres && e.genres[0]) || e.genre || '';
-    if (g) genreCounts[g] = (genreCounts[g] || 0) + 1;
-  });
-  var max = Math.max.apply(null, Object.values(counts).concat([1]));
-  var html = '';
-  Object.entries(counts).forEach(function(kv) {
-    if (kv[1] > 0) {
-      html += '<div class="bar-row"><span class="bar-label">' + labels[kv[0]] + '</span>'
-        + '<div class="bar-track"><div class="bar-fill" style="width:' + (kv[1]/max*100) + '%;background:var(--' + kv[0] + ')"></div></div>'
-        + '<span class="bar-count">' + kv[1] + '</span></div>';
-    }
-  });
-  $('chart').innerHTML = html || '<p style="text-align:center;color:var(--text3)">No data yet</p>';
-
-  var genreArr = Object.entries(genreCounts).sort(function(a,b){ return b[1]-a[1]; });
-  var gmax = genreArr.length ? genreArr[0][1] : 1;
-  var ghtml = genreArr.slice(0,5).map(function(g) {
-    return '<div class="bar-row"><span class="bar-label">' + esc(g[0]) + '</span>'
-      + '<div class="bar-track"><div class="bar-fill" style="width:' + (g[1]/gmax*100) + '%;background:var(--accent)"></div></div>'
-      + '<span class="bar-count">' + g[1] + '</span></div>';
-  }).join('');
-  $('genre-chart').innerHTML = ghtml || '<p style="text-align:center;color:var(--text3)">No genre data</p>';
-}
-
-function exportData() {
-  var blob = new Blob([JSON.stringify({entries: entries, exported: new Date().toISOString(), source: isDemo ? 'demo' : 'atp:' + session?.did}, null, 2)], {type: 'application/json'});
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'breadcrumbs-' + new Date().toISOString().split('T')[0] + '.json';
-  a.click();
-  toast('Data exported!');
-}
-
-function toast(msg, type) {
-  var t = document.createElement('div');
-  t.className = 'toast ' + (type || 'success');
-  t.textContent = msg;
-  $('toasts').appendChild(t);
-  setTimeout(function(){ t.remove(); }, 3000);
-}
-
-document.addEventListener('DOMContentLoaded', init);
-</script>
+<script src="/app.js"></script>
 </body>
 </html>
