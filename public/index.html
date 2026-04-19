@@ -439,6 +439,49 @@
   </div><!-- /entry-modal -->
 
 
+  <!-- ═══ LIST MODAL ══════════════════════════════════════════ -->
+  <div class="bc-modal-bg" id="list-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="list-modal-title">
+    <div class="bc-modal">
+      <div class="bc-modal__grip" aria-hidden="true"></div>
+
+      <div class="bc-modal__head">
+        <span class="bc-modal__title" id="list-modal-title">New list</span>
+        <button class="bc-modal__close" id="list-modal-close" aria-label="Close">✕</button>
+      </div>
+
+      <div class="bc-modal__body">
+
+        <div class="bc-field">
+          <label class="bc-label" for="list-name">Name</label>
+          <input class="bc-input" id="list-name" type="text" placeholder="Winter reads, rewatch queue…" maxlength="128" autocomplete="off">
+        </div>
+
+        <div class="bc-field">
+          <label class="bc-label" for="list-desc">Description <span style="font-weight:400;color:var(--fg-4)">(optional)</span></label>
+          <textarea class="bc-input bc-textarea" id="list-desc" placeholder="A note about this list…" maxlength="500" rows="2"></textarea>
+        </div>
+
+        <div class="bc-field">
+          <label class="bc-label">Color</label>
+          <div class="bc-color-swatches" id="list-color-swatches"></div>
+        </div>
+
+        <div class="bc-field">
+          <label class="bc-label">Entries <span class="bc-label-aside" id="list-entry-count"></span></label>
+          <div class="bc-list-entry-picker" id="list-entry-picker"></div>
+        </div>
+
+      </div>
+
+      <div class="bc-modal__actions">
+        <button class="bc-btn bc-btn--danger bc-btn--sm" id="list-modal-delete" style="display:none;margin-right:auto">Delete</button>
+        <button class="bc-btn bc-btn--secondary" id="list-modal-cancel">Cancel</button>
+        <button class="bc-btn bc-btn--primary" id="list-modal-save">Save list</button>
+      </div>
+    </div>
+  </div><!-- /list-modal -->
+
+
   <!-- ═══ AI / CATCH-ME-UP MODAL ══════════════════════════════ -->
   <div class="bc-modal-bg" id="ai-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="ai-title">
     <div class="bc-modal">

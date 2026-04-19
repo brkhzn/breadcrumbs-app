@@ -64,6 +64,14 @@ var filterType     = 'all';
 var catchupDismissed = false;
 var subActive      = false;
 var subTier        = null;   // 'monthly' | 'annual' | 'lifetime' | null
+var lists          = [];
+var editListRkey   = null;
+var listDetailRkey = null;
+var listSelColor   = '#5F6B43';
+var listSelItems   = [];     // array of entry rkeys selected in modal
+
+var ATP_LIST_COLLECTION = 'app.breadcrumbs.list';
+var LIST_COLORS = ['#5F6B43','#6B4E71','#B08848','#A45A3C','#4F706D','#8A3B3B','#8A7BA8','#6B6358'];
 
 // ── Helpers ──────────────────────────────────────────────────
 function $(id)  { return document.getElementById(id); }
@@ -240,6 +248,51 @@ function buildRecord(entry, collection) {
   return rec;
 }
 
+// ── ATP — Lists ───────────────────────────────────────────────
+async function atpGetLists() {
+  var data = await atpRequest('GET',
+    'com.atproto.repo.listRecords?repo=' + encodeURIComponent(session.did) +
+    '&collection=' + ATP_LIST_COLLECTION + '&limit=100');
+  lists = (data.records || []).map(function(rec) {
+    var v = rec.value;
+    var rkey = rec.uri.split('/').pop();
+    var itemRkeys = (v.items || []).map(function(it) {
+      return it.subject && it.subject.uri ? it.subject.uri.split('/').pop() : null;
+    }).filter(Boolean);
+    return { rkey:rkey, uri:rec.uri, name:v.name, description:v.description||'',
+             color:v.color||'#5F6B43', items:itemRkeys, createdAt:v.createdAt };
+  });
+}
+
+async function atpSaveList(list) {
+  var record = {
+    $type: ATP_LIST_COLLECTION,
+    name: list.name,
+    description: list.description || '',
+    color: list.color,
+    items: list.items.map(function(rkey) {
+      var entry = entries.find(function(e) { return e.rkey === rkey; });
+      var uri = entry ? (entry.uri || ('at://' + session.did + '/' + (entry.collection||'app.breadcrumbs.book') + '/' + rkey)) : ('at://' + session.did + '/app.breadcrumbs.book/' + rkey);
+      return { subject:{ uri:uri, cid:'' }, addedAt:new Date().toISOString() };
+    }),
+    createdAt: list.createdAt || new Date().toISOString()
+  };
+  if (list.rkey) {
+    await atpRequest('POST', 'com.atproto.repo.putRecord',
+      { repo:session.did, collection:ATP_LIST_COLLECTION, rkey:list.rkey, record:record });
+  } else {
+    var data = await atpRequest('POST', 'com.atproto.repo.createRecord',
+      { repo:session.did, collection:ATP_LIST_COLLECTION, record:record });
+    list.rkey = data.uri.split('/').pop();
+    list.uri  = data.uri;
+  }
+}
+
+async function atpDeleteList(rkey) {
+  await atpRequest('POST', 'com.atproto.repo.deleteRecord',
+    { repo:session.did, collection:ATP_LIST_COLLECTION, rkey:rkey });
+}
+
 async function atpCreateEntry(entry) {
   showSync(true);
   try {
@@ -366,6 +419,16 @@ function init() {
     b.onclick = function() { setFilter(b.dataset.f); };
   });
 
+  // List buttons
+  $('new-list-btn').onclick = function() { openListModal(null); };
+  $('list-modal-close').onclick  = closeListModal;
+  $('list-modal-cancel').onclick = closeListModal;
+  $('list-modal-save').onclick   = saveList;
+  $('list-modal-delete').onclick = function() { deleteList(editListRkey); };
+  $('list-modal').addEventListener('click', function(e) {
+    if (e.target === $('list-modal')) closeListModal();
+  });
+
   // Restore session
   var savedSession = localStorage.getItem('bc_atp_session');
   if (savedSession) {
@@ -451,6 +514,7 @@ function showMain() {
   }
   renderSettings();
   updateStats();
+  renderLists();
 }
 
 // ── Subscription ─────────────────────────────────────────────
@@ -561,6 +625,7 @@ function loadDemoEntries() {
     saveDemoEntries();
   }
   render(); updateStats();
+  loadDemoLists();
   // Show catchup after a moment
   if (!catchupDismissed) setTimeout(function() {
     $('catchup-hero').classList.remove('hidden');
@@ -569,6 +634,265 @@ function loadDemoEntries() {
 
 function saveDemoEntries() {
   localStorage.setItem('bc_demo_entries', JSON.stringify(entries));
+}
+
+// ── Lists — storage ───────────────────────────────────────────
+function saveDemoLists() {
+  localStorage.setItem('bc_demo_lists', JSON.stringify(lists));
+}
+function loadDemoLists() {
+  var saved = localStorage.getItem('bc_demo_lists');
+  try { lists = saved ? JSON.parse(saved) : []; } catch(e) { lists = []; }
+  renderLists();
+}
+
+// ── Lists — render ────────────────────────────────────────────
+function renderLists() {
+  var container = $('lists-container');
+  if (!container) return;
+
+  if (listDetailRkey) { renderListDetail(listDetailRkey); return; }
+
+  if (!lists.length) {
+    container.innerHTML =
+      '<div class="bc-empty">'
+      + '<svg width="32" height="32" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M5 3h10a1 1 0 011 1v13l-6-3.5L4 17V4a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/></svg>'
+      + '<h3>No lists yet</h3>'
+      + '<p>Gather your breadcrumbs into a curated list — winter reads, rewatch queue, anything.</p>'
+      + '<button class="bc-btn bc-btn--secondary" style="margin-top:18px" id="create-list-btn">'
+      + '<svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true"><line x1="10" y1="4" x2="10" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="4" y1="10" x2="16" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
+      + ' New list</button>'
+      + '</div>';
+    var btn = $('create-list-btn');
+    if (btn) btn.onclick = function() { openListModal(null); };
+    return;
+  }
+
+  container.innerHTML = '<div class="bc-lists">'
+    + lists.map(function(l) {
+      var count = l.items ? l.items.length : 0;
+      var types = (l.items || []).map(function(rkey) {
+        var e = entries.find(function(e) { return e.rkey === rkey; });
+        return e ? LABELS[e.type] : null;
+      }).filter(Boolean);
+      var uniqTypes = types.filter(function(t,i,a) { return a.indexOf(t) === i; });
+      var meta = count + (count === 1 ? ' entry' : ' entries')
+        + (uniqTypes.length ? ' · ' + uniqTypes.join(', ') : '');
+      return '<button class="bc-list-card" style="--list-color:' + esc(l.color||'#5F6B43') + '"'
+        + ' onclick="openListDetail(\'' + l.rkey + '\')">'
+        + '<div class="bc-list-card__dot"></div>'
+        + '<div class="bc-list-card__body">'
+        + '<div class="bc-list-card__name">' + esc(l.name) + '</div>'
+        + '<div class="bc-list-card__meta">' + esc(meta) + '</div>'
+        + '</div>'
+        + SVG_CHEV
+        + '</button>';
+    }).join('')
+    + '</div>';
+}
+
+function renderListDetail(rkey) {
+  var container = $('lists-container');
+  if (!container) return;
+  var list = lists.find(function(l) { return l.rkey === rkey; });
+  if (!list) { listDetailRkey = null; renderLists(); return; }
+
+  var items = (list.items || []).map(function(rk) {
+    return entries.find(function(e) { return e.rkey === rk; });
+  }).filter(Boolean);
+
+  var html =
+    '<div class="bc-list-detail__head">'
+    + '<button class="bc-icon-btn" onclick="backToLists()" aria-label="Back" style="margin-right:2px">'
+    + '<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><polyline points="11,3 5,9 11,15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    + '</button>'
+    + '<div class="bc-list-detail__dot" style="background:' + esc(list.color||'#5F6B43') + '"></div>'
+    + '<div class="bc-list-detail__name">' + esc(list.name) + '</div>'
+    + '<button class="bc-icon-btn" onclick="openListModal(\'' + rkey + '\')" aria-label="Edit list">'
+    + '<svg width="17" height="17" viewBox="0 0 18 18" fill="none"><path d="M12 3l3 3-9 9H3v-3L12 3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>'
+    + '</button>'
+    + '</div>';
+
+  if (list.description) {
+    html += '<p class="bc-list-detail__desc">' + esc(list.description) + '</p>';
+  }
+
+  if (!items.length) {
+    html += '<div class="bc-list-detail__empty">No entries in this list yet.<br>Edit the list to add some.</div>';
+  } else {
+    html += '<div class="bc-content" style="padding:14px 18px 80px">'
+      + '<div class="bc-entries">'
+      + items.map(function(e) {
+        var coverStyle = e.coverUrl
+          ? 'background-image:url(' + esc(e.coverUrl) + ');background-size:cover;background-position:center'
+          : 'background:' + (COVER_BG[e.type]||COVER_BG.book);
+        var typeLabel = LABELS[e.type] || e.type;
+        var subtitle  = e.authors ? e.authors[0] : (e.creator || e.developer || '');
+        return '<button class="bc-card bc-card--' + e.type + '" onclick="openEdit(\'' + e.rkey + '\',\'' + (e.collection||'') + '\')">'
+          + '<div class="bc-card__spine" aria-hidden="true"></div>'
+          + '<div class="bc-card__body">'
+          + '<div class="bc-card__cover" style="' + coverStyle + '" aria-hidden="true"></div>'
+          + '<div class="bc-card__info">'
+          + '<div class="bc-card__meta"><span class="bc-pill bc-pill--' + e.type + '">' + (CAT_SVG[e.type]||'') + ' ' + esc(typeLabel) + '</span></div>'
+          + '<div class="bc-card__title">' + esc(e.title) + '</div>'
+          + (subtitle ? '<div class="bc-card__subtitle">' + esc(subtitle) + '</div>' : '')
+          + '</div></div></button>';
+      }).join('')
+      + '</div></div>';
+  }
+
+  container.innerHTML = html;
+}
+
+function openListDetail(rkey) {
+  listDetailRkey = rkey;
+  renderListDetail(rkey);
+}
+
+function backToLists() {
+  listDetailRkey = null;
+  renderLists();
+}
+
+// ── List modal ────────────────────────────────────────────────
+function openListModal(rkey) {
+  var list = rkey ? lists.find(function(l) { return l.rkey === rkey; }) : null;
+  editListRkey = rkey || null;
+  listSelColor = list ? (list.color || '#5F6B43') : '#5F6B43';
+  listSelItems = list ? (list.items ? list.items.slice() : []) : [];
+
+  $('list-modal-title').textContent = list ? 'Edit list' : 'New list';
+  $('list-name').value = list ? list.name : '';
+  $('list-desc').value = list ? (list.description || '') : '';
+  $('list-modal-delete').style.display = list ? 'inline-flex' : 'none';
+
+  renderColorSwatches();
+  renderEntryPicker();
+  $('list-modal').style.display = 'flex';
+  setTimeout(function() { $('list-name').focus(); }, 60);
+}
+
+function closeListModal() {
+  $('list-modal').style.display = 'none';
+}
+
+function renderColorSwatches() {
+  var el = $('list-color-swatches');
+  if (!el) return;
+  el.innerHTML = LIST_COLORS.map(function(hex) {
+    return '<button type="button" class="bc-color-swatch' + (listSelColor === hex ? ' is-active' : '') + '"'
+      + ' style="background:' + hex + '" aria-label="Color ' + hex + '"'
+      + ' onclick="pickListColor(' + JSON.stringify(hex) + ')"></button>';
+  }).join('');
+}
+
+function pickListColor(hex) {
+  listSelColor = hex;
+  renderColorSwatches();
+}
+
+function renderEntryPicker() {
+  var el = $('list-entry-picker');
+  if (!el) return;
+  if (!entries.length) { el.innerHTML = ''; return; }
+  el.innerHTML = entries.map(function(e) {
+    var sel = listSelItems.indexOf(e.rkey) !== -1;
+    var coverStyle = e.coverUrl
+      ? 'background-image:url(' + esc(e.coverUrl) + ');background-size:cover;background-position:center'
+      : 'background:' + (COVER_BG[e.type]||COVER_BG.book);
+    var checkMark = sel ? '<svg width="11" height="9" viewBox="0 0 11 9" fill="none"><polyline points="1,4.5 4,7.5 10,1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '';
+    return '<div class="bc-entry-pick' + (sel ? ' is-selected' : '') + '" onclick="toggleListItem(\'' + e.rkey + '\')">'
+      + '<div class="bc-entry-pick__check">' + checkMark + '</div>'
+      + '<div class="bc-entry-pick__cover" style="' + coverStyle + '"></div>'
+      + '<div class="bc-entry-pick__info">'
+      + '<div class="bc-entry-pick__title">' + esc(e.title) + '</div>'
+      + '<div class="bc-entry-pick__sub">' + esc(LABELS[e.type]||e.type) + '</div>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+  updateEntryCount();
+}
+
+function toggleListItem(rkey) {
+  var idx = listSelItems.indexOf(rkey);
+  if (idx === -1) listSelItems.push(rkey);
+  else listSelItems.splice(idx, 1);
+  renderEntryPicker();
+}
+
+function updateEntryCount() {
+  var el = $('list-entry-count');
+  if (el) el.textContent = listSelItems.length ? listSelItems.length + ' selected' : '';
+}
+
+async function saveList() {
+  var name = ($('list-name').value || '').trim();
+  if (!name) { $('list-name').focus(); toast('Give your list a name', 'error'); return; }
+
+  var list = {
+    rkey:        editListRkey,
+    name:        name,
+    description: ($('list-desc').value || '').trim(),
+    color:       listSelColor,
+    items:       listSelItems.slice(),
+    createdAt:   editListRkey
+      ? (lists.find(function(l){return l.rkey===editListRkey;})||{}).createdAt || new Date().toISOString()
+      : new Date().toISOString()
+  };
+
+  $('list-modal-save').textContent = 'Saving…';
+  $('list-modal-save').disabled = true;
+
+  try {
+    if (isDemo) {
+      if (editListRkey) {
+        var idx = lists.findIndex(function(l) { return l.rkey === editListRkey; });
+        if (idx !== -1) lists[idx] = list;
+        else lists.unshift(list);
+      } else {
+        list.rkey = 'list-' + Date.now();
+        lists.unshift(list);
+      }
+      saveDemoLists();
+    } else {
+      await atpSaveList(list);
+      if (editListRkey) {
+        var idx = lists.findIndex(function(l) { return l.rkey === editListRkey; });
+        if (idx !== -1) lists[idx] = list;
+        else lists.unshift(list);
+      } else {
+        lists.unshift(list);
+      }
+    }
+    closeListModal();
+    if (listDetailRkey && listDetailRkey === editListRkey) {
+      renderListDetail(list.rkey);
+    } else {
+      listDetailRkey = null;
+      renderLists();
+    }
+    toast(editListRkey ? 'List updated' : 'List created');
+  } catch(e) {
+    toast('Could not save list: ' + e.message, 'error');
+  } finally {
+    $('list-modal-save').textContent = 'Save list';
+    $('list-modal-save').disabled = false;
+  }
+}
+
+async function deleteList(rkey) {
+  if (!confirm('Delete this list? This cannot be undone.')) return;
+  try {
+    if (!isDemo) await atpDeleteList(rkey);
+    lists = lists.filter(function(l) { return l.rkey !== rkey; });
+    if (isDemo) saveDemoLists();
+    closeListModal();
+    listDetailRkey = null;
+    renderLists();
+    toast('List deleted');
+  } catch(e) {
+    toast('Could not delete list: ' + e.message, 'error');
+  }
 }
 
 async function refreshEntries() {
@@ -692,8 +1016,7 @@ function renderSidebar() {
         prog = 'S' + e.season + (e.episode ? ' E' + e.episode : '');
       else if ((e.type === 'movie' || e.type === 'podcast') && e.timestamp)
         prog = e.timestamp;
-      return '<button class="bc-sidebar-card bc-card--' + e.type + '" onclick="openEdit('
-        + JSON.stringify(e.rkey) + ',' + JSON.stringify('app.breadcrumbs.' + e.type) + ')">'
+      return '<button class="bc-sidebar-card bc-card--' + e.type + '" onclick="openEdit(\'' + e.rkey + '\',\'app.breadcrumbs.' + e.type + '\')">'
         + '<div class="bc-sidebar-card__cover" style="' + coverStyle + '"></div>'
         + '<div class="bc-sidebar-card__info">'
         + '<div class="bc-sidebar-card__type">' + (CAT_SVG[e.type] || '') + ' ' + (TYPE_LABEL[e.type] || e.type) + '</div>'
@@ -728,6 +1051,7 @@ function switchTab(tab) {
   });
   if (tab === 'analytics') updateStats();
   if (tab === 'settings')  renderSettings();
+  if (tab === 'lists')     renderLists();
 }
 
 // ── Modal ────────────────────────────────────────────────────
