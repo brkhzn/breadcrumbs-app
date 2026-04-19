@@ -110,7 +110,7 @@ var CAT_SVG = {
 
 var SVG_CHEV = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" style="flex-shrink:0;color:var(--fg-4)"><polyline points="6,4 10,8 6,12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg>';
 
-var SVG_LOGOMARK = '<svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M8 4L8 28L24 24L24 4Z" fill="currentColor" opacity="0.15"/><path d="M8 4L8 28L24 24L24 4Z" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M8 14L24 12" stroke="currentColor" stroke-width="1.5"/><circle cx="16" cy="28" r="2.5" fill="currentColor" opacity="0.6"/></svg>';
+var SVG_LOGOMARK = '<svg viewBox="0 0 64 64" width="28" height="28" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="none" stroke="currentColor" stroke-width="1.4" opacity="0.45"/><circle cx="32" cy="32" r="24" fill="currentColor" opacity="0.08"/><text x="32" y="42" text-anchor="middle" font-family="Cormorant Garamond,serif" font-style="italic" font-weight="600" font-size="34" fill="currentColor">B</text><circle cx="48" cy="46" r="1.8" fill="currentColor"/><circle cx="52" cy="42" r="1.2" fill="currentColor"/><circle cx="50" cy="50" r="1" fill="currentColor"/></svg>';
 
 var SVG_ATP = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 11L8 5l2.5 6M6.5 9h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
 
@@ -603,6 +603,42 @@ function render() {
       + '</div>'  // .bc-card__body
       + '</button>';
   }).join('');
+  renderSidebar();
+}
+
+// ── Desktop sidebar ───────────────────────────────────────────
+function renderSidebar() {
+  var el = $('desktop-sidebar');
+  if (!el) return;
+  var inProg = entries.filter(function(e) { return e.status === STATUS.inProgress; }).slice(0, 6);
+  var TYPE_LABEL = { book:'Book', show:'Show', movie:'Film', game:'Game', podcast:'Podcast' };
+  if (!inProg.length) {
+    el.innerHTML = '<div class="bc-sidebar__heading">Currently</div>'
+      + '<div class="bc-sidebar__empty">Nothing in progress yet.</div>';
+    return;
+  }
+  el.innerHTML = '<div class="bc-sidebar__heading">Currently</div>'
+    + inProg.map(function(e) {
+      var coverStyle = e.coverUrl
+        ? 'background-image:url(' + esc(e.coverUrl) + ');background-size:cover;background-position:center'
+        : 'background:' + (COVER_BG[e.type] || COVER_BG.book);
+      var prog = '';
+      if (e.type === 'book' && e.currentPage && e.totalPages)
+        prog = 'p. ' + e.currentPage + ' / ' + e.totalPages;
+      else if (e.type === 'show' && e.season)
+        prog = 'S' + e.season + (e.episode ? ' E' + e.episode : '');
+      else if ((e.type === 'movie' || e.type === 'podcast') && e.timestamp)
+        prog = e.timestamp;
+      return '<button class="bc-sidebar-card bc-card--' + e.type + '" onclick="openEdit('
+        + JSON.stringify(e.rkey) + ',' + JSON.stringify('app.breadcrumbs.' + e.type) + ')">'
+        + '<div class="bc-sidebar-card__cover" style="' + coverStyle + '"></div>'
+        + '<div class="bc-sidebar-card__info">'
+        + '<div class="bc-sidebar-card__type">' + (CAT_SVG[e.type] || '') + ' ' + (TYPE_LABEL[e.type] || e.type) + '</div>'
+        + '<div class="bc-sidebar-card__title">' + esc(e.title) + '</div>'
+        + (e.creator ? '<div class="bc-sidebar-card__sub">' + esc(e.creator) + '</div>' : '')
+        + (prog       ? '<div class="bc-sidebar-card__prog">' + esc(prog) + '</div>' : '')
+        + '</div></button>';
+    }).join('');
 }
 
 // ── Filter ───────────────────────────────────────────────────
@@ -618,6 +654,7 @@ function setFilter(f) {
 
 // ── Tab switching ─────────────────────────────────────────────
 function switchTab(tab) {
+  window.scrollTo(0, 0);
   $$('.bc-tab').forEach(function(t) {
     var active = t.dataset.tab === tab;
     t.classList.toggle('is-active', active);
