@@ -40,13 +40,6 @@ var COVER_BG = {
   podcast: 'linear-gradient(160deg,#4F706D,#334947)'
 };
 
-// Preset summaries for demo mode
-var SUMMARIES = {
-  'Project Hail Mary':'<strong>Where you left off:</strong><br><br>Dr. Ryland Grace made contact with <strong>Rocky</strong>, an alien from Erid. They\'re working together to save both planets.<br><br>You stopped right after discovering how Astrophage reproduces.',
-  'Severance':'<strong>Where you left off:</strong><br><br>Deep in the Lumon mystery. Helly is trying to escape. Mark found a secret map.<br><br>You stopped right before the <strong>waffle party</strong>.',
-  'Oppenheimer':'<strong>Where you left off:</strong><br><br>You just witnessed the <strong>Trinity test</strong>. The Manhattan Project succeeded.',
-  "Baldur's Gate 3":'<strong>Where you left off:</strong><br><br>Playing as <strong>Dark Urge</strong> in Act 2. Moonrise Towers. Jaheira just joined your party.'
-};
 
 // ── State ────────────────────────────────────────────────────
 var session        = null;
@@ -61,9 +54,7 @@ var selectedMedia  = null;
 var searchTimeout  = null;
 var isDemo         = false;
 var filterType     = 'all';
-var catchupDismissed = false;
-var subActive      = false;
-var subTier        = null;   // 'monthly' | 'annual' | 'lifetime' | null
+
 var lists          = [];
 var editListRkey   = null;
 var listDetailRkey = null;
@@ -358,24 +349,6 @@ function init() {
   $('save-btn').onclick    = saveEntry;
   $('delete-btn').onclick  = deleteEntry;
 
-  // AI modal
-  $('ai-close').onclick  = closeAI;
-  $('ai-modal').onclick  = function(e) { if (e.target === this) closeAI(); };
-
-  // Catchup hero
-  $('catchup-dismiss-btn').onclick = function() {
-    catchupDismissed = true;
-    $('catchup-hero').classList.add('hidden');
-  };
-  $('catchup-open-btn').onclick = function() {
-    if (!subActive && !isDemo) {
-      switchTab('settings');
-      toast('Breadcrumbs+ required for AI features', 'info');
-      return;
-    }
-    var first = entries.find(function(e) { return e.status === STATUS.inProgress; });
-    if (first) showAI(first.rkey);
-  };
 
   // Search
   $('f-search').oninput = function() {
@@ -507,7 +480,6 @@ function showMain() {
   if (session) {
     $('atp-badge').classList.remove('hidden');
     $('demo-banner').classList.add('hidden');
-    checkSubStatus();
   } else {
     $('atp-badge').classList.add('hidden');
     $('demo-banner').classList.remove('hidden');
@@ -517,60 +489,6 @@ function showMain() {
   renderLists();
 }
 
-// ── Subscription ─────────────────────────────────────────────
-async function checkSubStatus() {
-  if (!session || !session.did) return;
-  try {
-    var resp = await fetch('/api/sub-status?did=' + encodeURIComponent(session.did));
-    var data = await resp.json();
-    subActive = !!data.active;
-    subTier   = data.tier || null;
-    renderSettings();
-  } catch(e) {
-    // Non-fatal — sub check failure doesn't block the app
-  }
-}
-
-async function startCheckout(tier) {
-  if (!session || !session.did) {
-    toast('Sign in with Bluesky to subscribe', 'error');
-    return;
-  }
-  try {
-    var resp = await fetch('/api/checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ did: session.did, tier: tier })
-    });
-    var data = await resp.json();
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
-      toast(data.error || 'Could not start checkout', 'error');
-    }
-  } catch(e) {
-    toast('Checkout unavailable — try again later', 'error');
-  }
-}
-
-async function openBillingPortal() {
-  if (!session || !session.did) return;
-  try {
-    var resp = await fetch('/api/billing-portal', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ did: session.did })
-    });
-    var data = await resp.json();
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
-      toast(data.error || 'Could not open billing portal', 'error');
-    }
-  } catch(e) {
-    toast('Billing portal unavailable — try again later', 'error');
-  }
-}
 
 // ── Data ─────────────────────────────────────────────────────
 async function loadEntries() {
@@ -626,10 +544,6 @@ function loadDemoEntries() {
   }
   render(); updateStats();
   loadDemoLists();
-  // Show catchup after a moment
-  if (!catchupDismissed) setTimeout(function() {
-    $('catchup-hero').classList.remove('hidden');
-  }, 800);
 }
 
 function saveDemoEntries() {
@@ -782,13 +696,19 @@ function renderColorSwatches() {
   el.innerHTML = LIST_COLORS.map(function(hex) {
     return '<button type="button" class="bc-color-swatch' + (listSelColor === hex ? ' is-active' : '') + '"'
       + ' style="background:' + hex + '" aria-label="Color ' + hex + '"'
-      + ' onclick="pickListColor(' + JSON.stringify(hex) + ')"></button>';
+      + ' onclick="pickListColor(\'' + hex + '\')"></button>';
   }).join('');
 }
 
 function pickListColor(hex) {
   listSelColor = hex;
   renderColorSwatches();
+}
+
+function pickAccentColor(hex) {
+  document.documentElement.style.setProperty('--accent', hex);
+  localStorage.setItem('bc_accent', hex);
+  renderSettings();
 }
 
 function renderEntryPicker() {
@@ -1396,24 +1316,6 @@ function clearSelection() {
   $('f-search').value = '';
 }
 
-// ── AI / Catch me up ──────────────────────────────────────────
-function showAI(rkey) {
-  var e = entries.find(function(x) { return x.rkey === rkey; });
-  if (!e) return;
-  $('ai-title').textContent = e.title;
-  $('ai-body').innerHTML = '<div style="text-align:center;padding:32px 0"><div class="bc-spinner"></div><p style="margin-top:14px;font-style:italic;color:var(--fg-3);font-family:var(--serif-body)">Generating recap…</p></div>';
-  $('ai-modal').style.display = 'flex';
-  setTimeout(function() {
-    var prog = formatProgress(e);
-    var fallback = '<strong>Where you left off in ' + esc(e.title) + ':</strong><br><br>'
-      + (prog ? 'You\'re at <strong>' + esc(prog) + '</strong>.<br><br>' : '')
-      + (e.notes ? 'Your notes: "' + esc(e.notes) + '"<br><br>' : '')
-      + '<em style="color:var(--fg-3)">Connect a Breadcrumbs+ account for a full AI-generated recap.</em>';
-    $('ai-body').innerHTML = SUMMARIES[e.title] || fallback;
-  }, 1200);
-}
-
-function closeAI() { $('ai-modal').style.display = 'none'; }
 
 // ── Analytics ────────────────────────────────────────────────
 function generateHeat(entries) {
@@ -1549,20 +1451,18 @@ function renderSettings() {
     + '<span class="bc-settings__item-label">Hide cover art</span>'
     + '<span class="bc-toggle' + (hideCovers ? ' is-on' : '') + '" role="switch" aria-checked="' + hideCovers + '"></span>'
     + '</button>'
+    + '<div class="bc-settings__item bc-settings__item--stack">'
+    + '<span class="bc-settings__item-label">Accent color</span>'
+    + '<div class="bc-color-swatches bc-color-swatches--sm">'
+    + LIST_COLORS.map(function(hex) {
+        var active = (localStorage.getItem('bc_accent') || '') === hex;
+        return '<button type="button" class="bc-color-swatch' + (active ? ' is-active' : '') + '"'
+          + ' style="background:' + hex + '" aria-label="Accent ' + hex + '"'
+          + ' onclick="pickAccentColor(\'' + hex + '\')"></button>';
+      }).join('')
     + '</div>'
-
-    // ── Subscription
-    + buildSubSection()
-
-    // ── AI features (only shown when subscribed)
-    + (subActive
-      ? '<div class="bc-settings__section">'
-        + '<div class="bc-settings__head">AI features</div>'
-        + '<button class="bc-settings__item"><span class="bc-settings__item-label">Catch me up</span><span class="bc-settings__item-detail">Weekly</span>' + SVG_CHEV + '</button>'
-        + '<button class="bc-settings__item"><span class="bc-settings__item-label">Summarize new entries</span><span class="bc-toggle is-on" role="switch" aria-checked="true"></span></button>'
-        + '<button class="bc-settings__item"><span class="bc-settings__item-label">Personal reading insights</span><span class="bc-toggle is-on" role="switch" aria-checked="true"></span></button>'
-        + '</div>'
-      : '')
+    + '</div>'
+    + '</div>'
 
     // ── Your data
     + '<div class="bc-settings__section">'
@@ -1596,69 +1496,8 @@ function renderSettings() {
   $('s-refresh').onclick     = refreshEntries;
   $('s-logout').onclick      = logout;
 
-  // Subscription handlers
-  if ($('s-manage-sub'))   $('s-manage-sub').onclick   = openBillingPortal;
-  if ($('s-upgrade-mo'))   $('s-upgrade-mo').onclick   = function() { startCheckout('monthly'); };
-  if ($('s-upgrade-yr'))   $('s-upgrade-yr').onclick   = function() { startCheckout('annual'); };
-  if ($('s-upgrade-life')) $('s-upgrade-life').onclick = function() { startCheckout('lifetime'); };
 }
 
-function buildSubSection() {
-  var TIER_LABELS = { monthly:'Monthly', annual:'Annual', lifetime:'Lifetime' };
-  if (subActive) {
-    var tierLabel = TIER_LABELS[subTier] || 'Active';
-    var isLifetime = subTier === 'lifetime';
-    return '<div class="bc-settings__section">'
-      + '<div class="bc-settings__head">Subscription</div>'
-      + '<div class="bc-sub-card bc-sub-card--active">'
-      + '<div class="bc-sub-card__mark">✦</div>'
-      + '<div class="bc-sub-card__body">'
-      + '<div class="bc-sub-card__tier">Breadcrumbs+</div>'
-      + '<div class="bc-sub-card__plan">' + tierLabel + (isLifetime ? ' · never expires' : '') + '</div>'
-      + '</div>'
-      + '</div>'
-      + (isLifetime
-          ? ''
-          : '<button class="bc-settings__item" id="s-manage-sub"><span class="bc-settings__item-label">Manage subscription</span>' + SVG_CHEV + '</button>')
-      + '</div>';
-  }
-
-  // Upgrade UI — not subscribed
-  var canBuy = !!(session && session.did);
-  var disabledAttr = canBuy ? '' : ' disabled title="Sign in with Bluesky to subscribe"';
-  return '<div class="bc-settings__section">'
-    + '<div class="bc-settings__head">Breadcrumbs+</div>'
-    + '<p class="bc-sub-pitch">AI recaps, personalized insights, and priority support. Pay only enough to cover costs.</p>'
-    + '<div class="bc-sub-tiers">'
-
-    // Monthly
-    + '<div class="bc-sub-tier">'
-    + '<div class="bc-sub-tier__name">Monthly</div>'
-    + '<div class="bc-sub-tier__price">$1.99<span>/mo</span></div>'
-    + '<button class="bc-btn bc-btn--secondary bc-btn--block bc-sub-tier__btn" id="s-upgrade-mo"' + disabledAttr + '>Choose</button>'
-    + '</div>'
-
-    // Annual — highlighted
-    + '<div class="bc-sub-tier bc-sub-tier--featured">'
-    + '<div class="bc-sub-tier__badge">Best value</div>'
-    + '<div class="bc-sub-tier__name">Annual</div>'
-    + '<div class="bc-sub-tier__price">$14.99<span>/yr</span></div>'
-    + '<div class="bc-sub-tier__save">Save 37%</div>'
-    + '<button class="bc-btn bc-btn--primary bc-btn--block bc-sub-tier__btn" id="s-upgrade-yr"' + disabledAttr + '>Choose</button>'
-    + '</div>'
-
-    // Lifetime
-    + '<div class="bc-sub-tier">'
-    + '<div class="bc-sub-tier__name">Lifetime</div>'
-    + '<div class="bc-sub-tier__price">$39<span> once</span></div>'
-    + '<div class="bc-sub-tier__save">Founding member</div>'
-    + '<button class="bc-btn bc-btn--secondary bc-btn--block bc-sub-tier__btn" id="s-upgrade-life"' + disabledAttr + '>Choose</button>'
-    + '</div>'
-
-    + '</div>'
-    + (!canBuy ? '<p class="bc-sub-note">Sign in with Bluesky to subscribe.</p>' : '')
-    + '</div>';
-}
 
 function toggleLargeText() {
   var app = $('app');
@@ -1704,6 +1543,8 @@ function toast(msg, type) {
 function restorePrefs() {
   if (localStorage.getItem('bc_large_text')  === 'true') $('app').classList.add('is-large-text');
   if (localStorage.getItem('bc_hide_covers') === 'true') $('app').classList.add('is-hide-covers');
+  var savedAccent = localStorage.getItem('bc_accent');
+  if (savedAccent) document.documentElement.style.setProperty('--accent', savedAccent);
 }
 
 // ── Boot ──────────────────────────────────────────────────────
@@ -1711,25 +1552,4 @@ document.addEventListener('DOMContentLoaded', function() {
   restorePrefs();
   init();
 
-  // Handle Stripe return redirects
-  var params = new URLSearchParams(window.location.search);
-  if (params.get('sub') === 'success') {
-    history.replaceState(null, '', window.location.pathname);
-    // Re-check after a brief delay to let webhook settle
-    setTimeout(function() {
-      checkSubStatus().then(function() {
-        toast('Welcome to Breadcrumbs+! AI features are now unlocked.', 'success');
-        switchTab('settings');
-      });
-    }, 1500);
-  } else if (params.get('sub') === 'cancel') {
-    history.replaceState(null, '', window.location.pathname);
-    toast('Checkout cancelled — no charge was made.', 'info');
-  }
-
-  // Return from settings billing portal
-  if (params.get('tab') === 'settings') {
-    history.replaceState(null, '', window.location.pathname);
-    switchTab('settings');
-  }
 });

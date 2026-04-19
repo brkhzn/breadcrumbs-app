@@ -131,25 +131,6 @@
       <div class="bc-timeline-body">
         <div class="bc-main-col">
 
-          <!-- Catchup hero (shown when entries exist) -->
-          <div id="catchup-hero" class="bc-catchup hidden">
-            <div class="bc-catchup__kicker">
-              <span class="bc-catchup__kicker-dot"></span>
-              <svg width="11" height="11" viewBox="0 0 14 14" fill="currentColor" aria-hidden="true"><path d="M7 0l1.1 4.9L13 7l-4.9 1.1L7 14l-1.1-4.9L1 7l4.9-1.1z"/></svg>
-              AI recap ready
-            </div>
-            <div class="bc-catchup__title">Catch me up on where I left off</div>
-            <div class="bc-catchup__body">A personalized recap of everything in progress, from your own breadcrumbs.</div>
-            <div class="bc-catchup__foot">
-              <button class="bc-catchup__btn" id="catchup-open-btn">
-                <svg width="12" height="12" viewBox="0 0 14 14" fill="currentColor" aria-hidden="true"><path d="M7 0l1.1 4.9L13 7l-4.9 1.1L7 14l-1.1-4.9L1 7l4.9-1.1z"/></svg>
-                Read recap
-              </button>
-              <span class="bc-catchup__meta">Breadcrumbs+</span>
-            </div>
-            <button class="bc-catchup__dismiss" id="catchup-dismiss-btn" aria-label="Dismiss">✕</button>
-          </div>
-
           <!-- Entries -->
           <div class="bc-content">
             <div id="loading-entries" class="hidden" style="text-align:center;padding:48px 24px">
@@ -481,28 +462,6 @@
     </div>
   </div><!-- /list-modal -->
 
-
-  <!-- ═══ AI / CATCH-ME-UP MODAL ══════════════════════════════ -->
-  <div class="bc-modal-bg" id="ai-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="ai-title">
-    <div class="bc-modal">
-      <div class="bc-modal__grip" aria-hidden="true"></div>
-
-      <div class="bc-modal__head">
-        <span class="bc-modal__title" id="ai-modal-head">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="var(--accent)" aria-hidden="true" style="margin-right:6px;vertical-align:-1px"><path d="M7 0l1.1 4.9L13 7l-4.9 1.1L7 14l-1.1-4.9L1 7l4.9-1.1z"/></svg>
-          <span id="ai-title">Catch me up</span>
-        </span>
-        <button class="bc-modal__close" id="ai-close" aria-label="Close">✕</button>
-      </div>
-
-      <div class="bc-modal__body">
-        <div id="ai-body" class="bc-ai-body"></div>
-      </div>
-
-      <div class="bc-ai-foot">Catch Me Up · Breadcrumbs</div>
-
-    </div>
-  </div><!-- /ai-modal -->
 
 
   <!-- ═══ UTILITY ══════════════════════════════════════════════ -->
