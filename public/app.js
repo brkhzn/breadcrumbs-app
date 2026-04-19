@@ -31,6 +31,14 @@ var STATUS_LABELS = {
 var LABELS = { book:'Book', show:'Show', movie:'Film', game:'Game', podcast:'Podcast' };
 var DOT_COLORS = { book:'#5F6B43', show:'#6B4E71', movie:'#B08848', game:'#A45A3C', podcast:'#4F706D' };
 
+// Palettes ordered darkest → lightest characteristic tone
+var PALETTES = [
+  { id:'forest', name:'Forest', light:{bg:'#EEF2EC',fg:'#1A2C20'}, dark:{bg:'#0D1410',fg:'#C8DEC4'}, accent:'#2D6B45' },
+  { id:'ember',  name:'Ember',  light:{bg:'#F5EEE0',fg:'#2C1E0E'}, dark:{bg:'#1A1510',fg:'#E8D5B5'}, accent:'#B06820' },
+  { id:'ocean',  name:'Ocean',  light:{bg:'#EBF0F5',fg:'#1A2535'}, dark:{bg:'#0C1118',fg:'#C0D4E8'}, accent:'#2C5F8A' },
+  { id:'ink',    name:'Ink',    light:{bg:'#F5EFE2',fg:'#2A2520'}, dark:{bg:'#14110C',fg:'#F1E8D5'}, accent:'#8A3B3B' },
+];
+
 // Fallback CSS-gradient covers (used when no coverUrl)
 var COVER_BG = {
   book:    'linear-gradient(160deg,#5F6B43,#3E4A27)',
@@ -40,13 +48,6 @@ var COVER_BG = {
   podcast: 'linear-gradient(160deg,#4F706D,#334947)'
 };
 
-// Preset summaries for demo mode
-var SUMMARIES = {
-  'Project Hail Mary':'<strong>Where you left off:</strong><br><br>Dr. Ryland Grace made contact with <strong>Rocky</strong>, an alien from Erid. They\'re working together to save both planets.<br><br>You stopped right after discovering how Astrophage reproduces.',
-  'Severance':'<strong>Where you left off:</strong><br><br>Deep in the Lumon mystery. Helly is trying to escape. Mark found a secret map.<br><br>You stopped right before the <strong>waffle party</strong>.',
-  'Oppenheimer':'<strong>Where you left off:</strong><br><br>You just witnessed the <strong>Trinity test</strong>. The Manhattan Project succeeded.',
-  "Baldur's Gate 3":'<strong>Where you left off:</strong><br><br>Playing as <strong>Dark Urge</strong> in Act 2. Moonrise Towers. Jaheira just joined your party.'
-};
 
 // ── State ────────────────────────────────────────────────────
 var session        = null;
@@ -61,9 +62,21 @@ var selectedMedia  = null;
 var searchTimeout  = null;
 var isDemo         = false;
 var filterType     = 'all';
-var catchupDismissed = false;
-var subActive      = false;
-var subTier        = null;   // 'monthly' | 'annual' | 'lifetime' | null
+
+var filterStatuses = ['app.breadcrumbs.defs#inProgress'];
+
+var themePalette = 'ink';
+var themeMode    = 'system';
+var _darkMQ      = window.matchMedia('(prefers-color-scheme: dark)');
+
+var lists          = [];
+var editListRkey   = null;
+var listDetailRkey = null;
+var listSelColor   = '#5F6B43';
+var listSelItems   = [];     // array of entry rkeys selected in modal
+
+var ATP_LIST_COLLECTION = 'app.breadcrumbs.list';
+var LIST_COLORS = ['#5F6B43','#6B4E71','#B08848','#A45A3C','#4F706D','#8A3B3B','#8A7BA8','#6B6358'];
 
 // ── Helpers ──────────────────────────────────────────────────
 function $(id)  { return document.getElementById(id); }
@@ -117,22 +130,45 @@ var SVG_LOGOMARK = '<svg viewBox="0 0 64 64" width="28" height="28" aria-hidden=
 var SVG_ATP = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 11L8 5l2.5 6M6.5 9h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
 
 // ── Theme ────────────────────────────────────────────────────
-function applyTheme(t) {
-  document.documentElement.setAttribute('data-theme', t);
-  localStorage.setItem('bc_theme', t);
+function applyPalette(p) {
+  themePalette = p;
+  document.documentElement.setAttribute('data-palette', p);
+  localStorage.setItem('bc_palette', p);
+  renderSettings();
+}
+
+function _syncSystemMode() {
+  if (themeMode === 'system') {
+    document.documentElement.setAttribute('data-mode', _darkMQ.matches ? 'dark' : 'light');
+  }
+}
+
+function applyMode(m) {
+  themeMode = m;
+  localStorage.setItem('bc_mode', m);
+  if (m === 'system') {
+    _darkMQ.addEventListener('change', _syncSystemMode);
+    _syncSystemMode();
+  } else {
+    _darkMQ.removeEventListener('change', _syncSystemMode);
+    document.documentElement.setAttribute('data-mode', m);
+  }
+  renderSettings();
 }
 
 function detectTheme() {
-  var saved = localStorage.getItem('bc_theme');
-  if (saved) { applyTheme(saved); return; }
-  if (window.matchMedia('(prefers-color-scheme: dark)').matches) applyTheme('night');
-}
-
-function toggleTheme() {
-  var current = document.documentElement.getAttribute('data-theme');
-  applyTheme(current === 'night' ? 'day' : 'night');
-  var lbl = $('theme-label');
-  if (lbl) lbl.textContent = document.documentElement.getAttribute('data-theme') === 'night' ? 'Night library' : 'Parchment';
+  var legacy = localStorage.getItem('bc_theme');
+  if (legacy) {
+    var legacyModeMap = { night:'dark', forest:'dark', sepia:'dark', slate:'light', dusk:'light', day:'light' };
+    var legacyPaletteMap = { night:'ink', forest:'forest', sepia:'ember', slate:'ink', dusk:'ink', day:'ink' };
+    localStorage.setItem('bc_mode', legacyModeMap[legacy] || 'system');
+    localStorage.setItem('bc_palette', legacyPaletteMap[legacy] || 'ink');
+    localStorage.removeItem('bc_theme');
+  }
+  var savedPalette = localStorage.getItem('bc_palette') || 'ink';
+  var savedMode    = localStorage.getItem('bc_mode')    || 'system';
+  applyPalette(savedPalette);
+  applyMode(savedMode);
 }
 
 // ── AT Protocol ──────────────────────────────────────────────
@@ -240,6 +276,51 @@ function buildRecord(entry, collection) {
   return rec;
 }
 
+// ── ATP — Lists ───────────────────────────────────────────────
+async function atpGetLists() {
+  var data = await atpRequest('GET',
+    'com.atproto.repo.listRecords?repo=' + encodeURIComponent(session.did) +
+    '&collection=' + ATP_LIST_COLLECTION + '&limit=100');
+  lists = (data.records || []).map(function(rec) {
+    var v = rec.value;
+    var rkey = rec.uri.split('/').pop();
+    var itemRkeys = (v.items || []).map(function(it) {
+      return it.subject && it.subject.uri ? it.subject.uri.split('/').pop() : null;
+    }).filter(Boolean);
+    return { rkey:rkey, uri:rec.uri, name:v.name, description:v.description||'',
+             color:v.color||'#5F6B43', items:itemRkeys, createdAt:v.createdAt };
+  });
+}
+
+async function atpSaveList(list) {
+  var record = {
+    $type: ATP_LIST_COLLECTION,
+    name: list.name,
+    description: list.description || '',
+    color: list.color,
+    items: list.items.map(function(rkey) {
+      var entry = entries.find(function(e) { return e.rkey === rkey; });
+      var uri = entry ? (entry.uri || ('at://' + session.did + '/' + (entry.collection||'app.breadcrumbs.book') + '/' + rkey)) : ('at://' + session.did + '/app.breadcrumbs.book/' + rkey);
+      return { subject:{ uri:uri, cid:'' }, addedAt:new Date().toISOString() };
+    }),
+    createdAt: list.createdAt || new Date().toISOString()
+  };
+  if (list.rkey) {
+    await atpRequest('POST', 'com.atproto.repo.putRecord',
+      { repo:session.did, collection:ATP_LIST_COLLECTION, rkey:list.rkey, record:record });
+  } else {
+    var data = await atpRequest('POST', 'com.atproto.repo.createRecord',
+      { repo:session.did, collection:ATP_LIST_COLLECTION, record:record });
+    list.rkey = data.uri.split('/').pop();
+    list.uri  = data.uri;
+  }
+}
+
+async function atpDeleteList(rkey) {
+  await atpRequest('POST', 'com.atproto.repo.deleteRecord',
+    { repo:session.did, collection:ATP_LIST_COLLECTION, rkey:rkey });
+}
+
 async function atpCreateEntry(entry) {
   showSync(true);
   try {
@@ -305,24 +386,6 @@ function init() {
   $('save-btn').onclick    = saveEntry;
   $('delete-btn').onclick  = deleteEntry;
 
-  // AI modal
-  $('ai-close').onclick  = closeAI;
-  $('ai-modal').onclick  = function(e) { if (e.target === this) closeAI(); };
-
-  // Catchup hero
-  $('catchup-dismiss-btn').onclick = function() {
-    catchupDismissed = true;
-    $('catchup-hero').classList.add('hidden');
-  };
-  $('catchup-open-btn').onclick = function() {
-    if (!subActive && !isDemo) {
-      switchTab('settings');
-      toast('Breadcrumbs+ required for AI features', 'info');
-      return;
-    }
-    var first = entries.find(function(e) { return e.status === STATUS.inProgress; });
-    if (first) showAI(first.rkey);
-  };
 
   // Search
   $('f-search').oninput = function() {
@@ -364,6 +427,21 @@ function init() {
   // Filter chips
   $$('.bc-filter').forEach(function(b) {
     b.onclick = function() { setFilter(b.dataset.f); };
+  });
+
+  // Status filter chips
+  $$('.bc-sfilter').forEach(function(b) {
+    b.onclick = function() { setStatusFilter(b.dataset.sf); };
+  });
+
+  // List buttons
+  $('new-list-btn').onclick = function() { openListModal(null); };
+  $('list-modal-close').onclick  = closeListModal;
+  $('list-modal-cancel').onclick = closeListModal;
+  $('list-modal-save').onclick   = saveList;
+  $('list-modal-delete').onclick = function() { deleteList(editListRkey); };
+  $('list-modal').addEventListener('click', function(e) {
+    if (e.target === $('list-modal')) closeListModal();
   });
 
   // Restore session
@@ -444,69 +522,15 @@ function showMain() {
   if (session) {
     $('atp-badge').classList.remove('hidden');
     $('demo-banner').classList.add('hidden');
-    checkSubStatus();
   } else {
     $('atp-badge').classList.add('hidden');
     $('demo-banner').classList.remove('hidden');
   }
   renderSettings();
   updateStats();
+  renderLists();
 }
 
-// ── Subscription ─────────────────────────────────────────────
-async function checkSubStatus() {
-  if (!session || !session.did) return;
-  try {
-    var resp = await fetch('/api/sub-status?did=' + encodeURIComponent(session.did));
-    var data = await resp.json();
-    subActive = !!data.active;
-    subTier   = data.tier || null;
-    renderSettings();
-  } catch(e) {
-    // Non-fatal — sub check failure doesn't block the app
-  }
-}
-
-async function startCheckout(tier) {
-  if (!session || !session.did) {
-    toast('Sign in with Bluesky to subscribe', 'error');
-    return;
-  }
-  try {
-    var resp = await fetch('/api/checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ did: session.did, tier: tier })
-    });
-    var data = await resp.json();
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
-      toast(data.error || 'Could not start checkout', 'error');
-    }
-  } catch(e) {
-    toast('Checkout unavailable — try again later', 'error');
-  }
-}
-
-async function openBillingPortal() {
-  if (!session || !session.did) return;
-  try {
-    var resp = await fetch('/api/billing-portal', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ did: session.did })
-    });
-    var data = await resp.json();
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
-      toast(data.error || 'Could not open billing portal', 'error');
-    }
-  } catch(e) {
-    toast('Billing portal unavailable — try again later', 'error');
-  }
-}
 
 // ── Data ─────────────────────────────────────────────────────
 async function loadEntries() {
@@ -561,14 +585,276 @@ function loadDemoEntries() {
     saveDemoEntries();
   }
   render(); updateStats();
-  // Show catchup after a moment
-  if (!catchupDismissed) setTimeout(function() {
-    $('catchup-hero').classList.remove('hidden');
-  }, 800);
+  loadDemoLists();
 }
 
 function saveDemoEntries() {
   localStorage.setItem('bc_demo_entries', JSON.stringify(entries));
+}
+
+// ── Lists — storage ───────────────────────────────────────────
+function saveDemoLists() {
+  localStorage.setItem('bc_demo_lists', JSON.stringify(lists));
+}
+function loadDemoLists() {
+  var saved = localStorage.getItem('bc_demo_lists');
+  try { lists = saved ? JSON.parse(saved) : []; } catch(e) { lists = []; }
+  renderLists();
+}
+
+// ── Lists — render ────────────────────────────────────────────
+function renderLists() {
+  var container = $('lists-container');
+  if (!container) return;
+
+  if (listDetailRkey) { renderListDetail(listDetailRkey); return; }
+
+  if (!lists.length) {
+    container.innerHTML =
+      '<div class="bc-empty">'
+      + '<svg width="32" height="32" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M5 3h10a1 1 0 011 1v13l-6-3.5L4 17V4a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/></svg>'
+      + '<h3>No lists yet</h3>'
+      + '<p>Gather your breadcrumbs into a curated list — winter reads, rewatch queue, anything.</p>'
+      + '<button class="bc-btn bc-btn--secondary" style="margin-top:18px" id="create-list-btn">'
+      + '<svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true"><line x1="10" y1="4" x2="10" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="4" y1="10" x2="16" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
+      + ' New list</button>'
+      + '</div>';
+    var btn = $('create-list-btn');
+    if (btn) btn.onclick = function() { openListModal(null); };
+    return;
+  }
+
+  container.innerHTML = '<div class="bc-lists">'
+    + lists.map(function(l) {
+      var count = l.items ? l.items.length : 0;
+      var types = (l.items || []).map(function(rkey) {
+        var e = entries.find(function(e) { return e.rkey === rkey; });
+        return e ? LABELS[e.type] : null;
+      }).filter(Boolean);
+      var uniqTypes = types.filter(function(t,i,a) { return a.indexOf(t) === i; });
+      var meta = count + (count === 1 ? ' entry' : ' entries')
+        + (uniqTypes.length ? ' · ' + uniqTypes.join(', ') : '');
+      return '<button class="bc-list-card" style="--list-color:' + esc(l.color||'#5F6B43') + '"'
+        + ' onclick="openListDetail(\'' + l.rkey + '\')">'
+        + '<div class="bc-list-card__dot"></div>'
+        + '<div class="bc-list-card__body">'
+        + '<div class="bc-list-card__name">' + esc(l.name) + '</div>'
+        + '<div class="bc-list-card__meta">' + esc(meta) + '</div>'
+        + '</div>'
+        + SVG_CHEV
+        + '</button>';
+    }).join('')
+    + '</div>';
+}
+
+function renderListDetail(rkey) {
+  var container = $('lists-container');
+  if (!container) return;
+  var list = lists.find(function(l) { return l.rkey === rkey; });
+  if (!list) { listDetailRkey = null; renderLists(); return; }
+
+  var items = (list.items || []).map(function(rk) {
+    return entries.find(function(e) { return e.rkey === rk; });
+  }).filter(Boolean);
+
+  var html =
+    '<div class="bc-list-detail__head">'
+    + '<button class="bc-icon-btn" onclick="backToLists()" aria-label="Back" style="margin-right:2px">'
+    + '<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><polyline points="11,3 5,9 11,15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    + '</button>'
+    + '<div class="bc-list-detail__dot" style="background:' + esc(list.color||'#5F6B43') + '"></div>'
+    + '<div class="bc-list-detail__name">' + esc(list.name) + '</div>'
+    + '<button class="bc-icon-btn" onclick="openListModal(\'' + rkey + '\')" aria-label="Edit list">'
+    + '<svg width="17" height="17" viewBox="0 0 18 18" fill="none"><path d="M12 3l3 3-9 9H3v-3L12 3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>'
+    + '</button>'
+    + '</div>';
+
+  if (list.description) {
+    html += '<p class="bc-list-detail__desc">' + esc(list.description) + '</p>';
+  }
+
+  if (!items.length) {
+    html += '<div class="bc-list-detail__empty">No entries in this list yet.<br>Edit the list to add some.</div>';
+  } else {
+    html += '<div class="bc-content" style="padding:14px 18px 80px">'
+      + '<div class="bc-entries">'
+      + items.map(function(e) {
+        var coverStyle = e.coverUrl
+          ? 'background-image:url(' + esc(e.coverUrl) + ');background-size:cover;background-position:center'
+          : 'background:' + (COVER_BG[e.type]||COVER_BG.book);
+        var typeLabel = LABELS[e.type] || e.type;
+        var subtitle  = e.authors ? e.authors[0] : (e.creator || e.developer || '');
+        return '<button class="bc-card bc-card--' + e.type + '" onclick="openEdit(\'' + e.rkey + '\',\'' + (e.collection||'') + '\')">'
+          + '<div class="bc-card__spine" aria-hidden="true"></div>'
+          + '<div class="bc-card__body">'
+          + '<div class="bc-card__cover" style="' + coverStyle + '" aria-hidden="true"></div>'
+          + '<div class="bc-card__info">'
+          + '<div class="bc-card__meta"><span class="bc-pill bc-pill--' + e.type + '">' + (CAT_SVG[e.type]||'') + ' ' + esc(typeLabel) + '</span></div>'
+          + '<div class="bc-card__title">' + esc(e.title) + '</div>'
+          + (subtitle ? '<div class="bc-card__subtitle">' + esc(subtitle) + '</div>' : '')
+          + '</div></div></button>';
+      }).join('')
+      + '</div></div>';
+  }
+
+  container.innerHTML = html;
+}
+
+function openListDetail(rkey) {
+  listDetailRkey = rkey;
+  renderListDetail(rkey);
+}
+
+function backToLists() {
+  listDetailRkey = null;
+  renderLists();
+}
+
+// ── List modal ────────────────────────────────────────────────
+function openListModal(rkey) {
+  var list = rkey ? lists.find(function(l) { return l.rkey === rkey; }) : null;
+  editListRkey = rkey || null;
+  listSelColor = list ? (list.color || '#5F6B43') : '#5F6B43';
+  listSelItems = list ? (list.items ? list.items.slice() : []) : [];
+
+  $('list-modal-title').textContent = list ? 'Edit list' : 'New list';
+  $('list-name').value = list ? list.name : '';
+  $('list-desc').value = list ? (list.description || '') : '';
+  $('list-modal-delete').style.display = list ? 'inline-flex' : 'none';
+
+  renderColorSwatches();
+  renderEntryPicker();
+  $('list-modal').style.display = 'flex';
+  setTimeout(function() { $('list-name').focus(); }, 60);
+}
+
+function closeListModal() {
+  $('list-modal').style.display = 'none';
+}
+
+function renderColorSwatches() {
+  var el = $('list-color-swatches');
+  if (!el) return;
+  el.innerHTML = LIST_COLORS.map(function(hex) {
+    return '<button type="button" class="bc-color-swatch' + (listSelColor === hex ? ' is-active' : '') + '"'
+      + ' style="background:' + hex + '" aria-label="Color ' + hex + '"'
+      + ' onclick="pickListColor(\'' + hex + '\')"></button>';
+  }).join('');
+}
+
+function pickListColor(hex) {
+  listSelColor = hex;
+  renderColorSwatches();
+}
+
+function pickAccentColor(hex) {
+  document.documentElement.style.setProperty('--accent', hex);
+  localStorage.setItem('bc_accent', hex);
+  renderSettings();
+}
+
+function renderEntryPicker() {
+  var el = $('list-entry-picker');
+  if (!el) return;
+  if (!entries.length) { el.innerHTML = ''; return; }
+  el.innerHTML = entries.map(function(e) {
+    var sel = listSelItems.indexOf(e.rkey) !== -1;
+    var coverStyle = e.coverUrl
+      ? 'background-image:url(' + esc(e.coverUrl) + ');background-size:cover;background-position:center'
+      : 'background:' + (COVER_BG[e.type]||COVER_BG.book);
+    var checkMark = sel ? '<svg width="11" height="9" viewBox="0 0 11 9" fill="none"><polyline points="1,4.5 4,7.5 10,1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '';
+    return '<div class="bc-entry-pick' + (sel ? ' is-selected' : '') + '" onclick="toggleListItem(\'' + e.rkey + '\')">'
+      + '<div class="bc-entry-pick__check">' + checkMark + '</div>'
+      + '<div class="bc-entry-pick__cover" style="' + coverStyle + '"></div>'
+      + '<div class="bc-entry-pick__info">'
+      + '<div class="bc-entry-pick__title">' + esc(e.title) + '</div>'
+      + '<div class="bc-entry-pick__sub">' + esc(LABELS[e.type]||e.type) + '</div>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+  updateEntryCount();
+}
+
+function toggleListItem(rkey) {
+  var idx = listSelItems.indexOf(rkey);
+  if (idx === -1) listSelItems.push(rkey);
+  else listSelItems.splice(idx, 1);
+  renderEntryPicker();
+}
+
+function updateEntryCount() {
+  var el = $('list-entry-count');
+  if (el) el.textContent = listSelItems.length ? listSelItems.length + ' selected' : '';
+}
+
+async function saveList() {
+  var name = ($('list-name').value || '').trim();
+  if (!name) { $('list-name').focus(); toast('Give your list a name', 'error'); return; }
+
+  var list = {
+    rkey:        editListRkey,
+    name:        name,
+    description: ($('list-desc').value || '').trim(),
+    color:       listSelColor,
+    items:       listSelItems.slice(),
+    createdAt:   editListRkey
+      ? (lists.find(function(l){return l.rkey===editListRkey;})||{}).createdAt || new Date().toISOString()
+      : new Date().toISOString()
+  };
+
+  $('list-modal-save').textContent = 'Saving…';
+  $('list-modal-save').disabled = true;
+
+  try {
+    if (isDemo) {
+      if (editListRkey) {
+        var idx = lists.findIndex(function(l) { return l.rkey === editListRkey; });
+        if (idx !== -1) lists[idx] = list;
+        else lists.unshift(list);
+      } else {
+        list.rkey = 'list-' + Date.now();
+        lists.unshift(list);
+      }
+      saveDemoLists();
+    } else {
+      await atpSaveList(list);
+      if (editListRkey) {
+        var idx = lists.findIndex(function(l) { return l.rkey === editListRkey; });
+        if (idx !== -1) lists[idx] = list;
+        else lists.unshift(list);
+      } else {
+        lists.unshift(list);
+      }
+    }
+    closeListModal();
+    if (listDetailRkey && listDetailRkey === editListRkey) {
+      renderListDetail(list.rkey);
+    } else {
+      listDetailRkey = null;
+      renderLists();
+    }
+    toast(editListRkey ? 'List updated' : 'List created');
+  } catch(e) {
+    toast('Could not save list: ' + e.message, 'error');
+  } finally {
+    $('list-modal-save').textContent = 'Save list';
+    $('list-modal-save').disabled = false;
+  }
+}
+
+async function deleteList(rkey) {
+  if (!confirm('Delete this list? This cannot be undone.')) return;
+  try {
+    if (!isDemo) await atpDeleteList(rkey);
+    lists = lists.filter(function(l) { return l.rkey !== rkey; });
+    if (isDemo) saveDemoLists();
+    closeListModal();
+    listDetailRkey = null;
+    renderLists();
+    toast('List deleted');
+  } catch(e) {
+    toast('Could not delete list: ' + e.message, 'error');
+  }
 }
 
 async function refreshEntries() {
@@ -617,6 +903,12 @@ function render() {
   var shown = filterType === 'all'
     ? entries
     : entries.filter(function(e) { return e.type === filterType; });
+
+  if (filterStatuses.length > 0) {
+    shown = shown.filter(function(e) {
+      return filterStatuses.indexOf(e.status || STATUS.inProgress) !== -1;
+    });
+  }
 
   var list  = $('entries');
   var empty = $('empty');
@@ -692,8 +984,7 @@ function renderSidebar() {
         prog = 'S' + e.season + (e.episode ? ' E' + e.episode : '');
       else if ((e.type === 'movie' || e.type === 'podcast') && e.timestamp)
         prog = e.timestamp;
-      return '<button class="bc-sidebar-card bc-card--' + e.type + '" onclick="openEdit('
-        + JSON.stringify(e.rkey) + ',' + JSON.stringify('app.breadcrumbs.' + e.type) + ')">'
+      return '<button class="bc-sidebar-card bc-card--' + e.type + '" onclick="openEdit(\'' + e.rkey + '\',\'app.breadcrumbs.' + e.type + '\')">'
         + '<div class="bc-sidebar-card__cover" style="' + coverStyle + '"></div>'
         + '<div class="bc-sidebar-card__info">'
         + '<div class="bc-sidebar-card__type">' + (CAT_SVG[e.type] || '') + ' ' + (TYPE_LABEL[e.type] || e.type) + '</div>'
@@ -715,6 +1006,19 @@ function setFilter(f) {
   render();
 }
 
+function setStatusFilter(s) {
+  var idx = filterStatuses.indexOf(s);
+  if (idx === -1) {
+    filterStatuses.push(s);
+  } else if (filterStatuses.length > 1) {
+    filterStatuses.splice(idx, 1);
+  }
+  $$('.bc-sfilter').forEach(function(b) {
+    b.classList.toggle('is-active', filterStatuses.indexOf(b.dataset.sf) !== -1);
+  });
+  render();
+}
+
 // ── Tab switching ─────────────────────────────────────────────
 function switchTab(tab) {
   window.scrollTo(0, 0);
@@ -728,19 +1032,18 @@ function switchTab(tab) {
   });
   if (tab === 'analytics') updateStats();
   if (tab === 'settings')  renderSettings();
+  if (tab === 'lists')     renderLists();
 }
 
 // ── Modal ────────────────────────────────────────────────────
 function openAdd() {
   editRkey = null; editCollection = null; selectedMedia = null;
   $('modal-title').textContent = 'Drop a breadcrumb';
-  $('f-title').value = '';
   $('f-notes').value = '';
   $('f-search').value = '';
   $('delete-btn').classList.add('hidden');
   $('selected-media').classList.add('hidden');
   $('search-group').classList.remove('hidden');
-  $('title-group').classList.remove('hidden');
   selGenre = ''; selRating = 0;
   pickType('book');
   pickStatus(STATUS.inProgress);
@@ -754,7 +1057,6 @@ function openEdit(rkey, collection) {
 
   editRkey = rkey; editCollection = collection; selectedMedia = null;
   $('modal-title').textContent = 'Edit entry';
-  $('f-title').value = e.title || '';
   $('f-notes').value = e.notes || '';
   $('f-search').value = '';
   $('delete-btn').classList.remove('hidden');
@@ -767,11 +1069,10 @@ function openEdit(rkey, collection) {
     $('selected-meta1').textContent = (e.authors||[]).join(', ') || e.creator || e.developer || '';
     $('selected-meta2').textContent = '';
     $('search-group').classList.add('hidden');
-    $('title-group').classList.add('hidden');
   } else {
     $('selected-media').classList.add('hidden');
     $('search-group').classList.remove('hidden');
-    $('title-group').classList.remove('hidden');
+    $('f-search').value = e.title || '';
   }
 
   selGenre  = (e.genres && e.genres[0]) || '';
@@ -870,7 +1171,7 @@ function buildProgressObject(type) {
 }
 
 async function saveEntry() {
-  var title = ($('f-title').value || (selectedMedia && selectedMedia.title) || '').trim();
+  var title = ((selectedMedia && selectedMedia.title) || $('f-search').value || '').trim();
   if (!title) { toast('Title is required', 'error'); return; }
 
   var entryData = {
@@ -967,11 +1268,13 @@ function renderSearchResults(items) {
       ? 'background-image:url(' + esc(item.cover) + ');background-size:cover;background-position:center'
       : 'background:' + (COVER_BG[selType]||COVER_BG.book);
     return '<button class="bc-search-row"'
-      + ' data-title="'  + esc(item.title)  + '"'
-      + ' data-cover="'  + esc(item.cover||'')  + '"'
-      + ' data-author="' + esc(item.author||'') + '"'
-      + ' data-year="'   + esc(item.year||'')   + '"'
-      + ' data-isbn13="' + esc(item.isbn13||'') + '">'
+      + ' data-title="'     + esc(item.title)       + '"'
+      + ' data-cover="'     + esc(item.cover||'')   + '"'
+      + ' data-author="'    + esc(item.author||'')  + '"'
+      + ' data-year="'      + esc(item.year||'')    + '"'
+      + ' data-isbn13="'    + esc(item.isbn13||'')  + '"'
+      + ' data-pages="'     + esc(String(item.pages||''))     + '"'
+      + ' data-developer="' + esc(item.developer||'') + '">'
       + '<div class="bc-search-row__cover" style="' + coverStyle + '" aria-hidden="true"></div>'
       + '<div>'
       + '<div class="bc-search-row__title">' + esc(item.title) + '</div>'
@@ -1013,8 +1316,10 @@ function searchBooks(query) {
         return {
           title:  v.title || 'Unknown',
           author: (v.authors||[]).join(', '),
+          year:   (v.publishedDate||'').slice(0,4),
           cover:  v.imageLinks?.thumbnail || v.imageLinks?.smallThumbnail || '',
-          isbn13: isbn ? isbn.identifier : ''
+          isbn13: isbn ? isbn.identifier : '',
+          pages:  v.pageCount || ''
         };
       }));
     })
@@ -1044,10 +1349,11 @@ function searchGames(query) {
 function selectResult(el) {
   var d = el.dataset;
   selectedMedia = {
-    title:    d.title  || '',
-    coverUrl: d.cover  || '',
-    authors:  d.author ? [d.author] : null,
-    isbn13:   d.isbn13 || null
+    title:     d.title     || '',
+    coverUrl:  d.cover     || '',
+    authors:   d.author    ? [d.author] : null,
+    isbn13:    d.isbn13    || null,
+    developer: d.developer || null
   };
   $('selected-media').classList.remove('hidden');
   $('selected-cover').style.cssText = selectedMedia.coverUrl
@@ -1055,54 +1361,42 @@ function selectResult(el) {
     : 'background:' + (COVER_BG[selType]||COVER_BG.book);
   $('selected-title').textContent = selectedMedia.title;
   $('selected-meta1').textContent = d.author || d.year || '';
-  $('selected-meta2').textContent = '';
-  $('f-title').value  = selectedMedia.title;
+  $('selected-meta2').textContent = d.pages ? d.pages + ' pages' : (d.year && d.author ? d.year : '');
   $('f-search').value = '';
   $('search-results').classList.add('hidden');
   $('search-group').classList.add('hidden');
-  $('title-group').classList.add('hidden');
+
+  // Auto-fill progress fields from API data
+  if (selType === 'book' && d.pages) {
+    var tp = $('f-total-pages');
+    if (tp && !tp.value) tp.value = d.pages;
+  }
 }
 
 function clearSelection() {
   selectedMedia = null;
   $('selected-media').classList.add('hidden');
   $('search-group').classList.remove('hidden');
-  $('title-group').classList.remove('hidden');
-  $('f-title').value  = '';
   $('f-search').value = '';
 }
 
-// ── AI / Catch me up ──────────────────────────────────────────
-function showAI(rkey) {
-  var e = entries.find(function(x) { return x.rkey === rkey; });
-  if (!e) return;
-  $('ai-title').textContent = e.title;
-  $('ai-body').innerHTML = '<div style="text-align:center;padding:32px 0"><div class="bc-spinner"></div><p style="margin-top:14px;font-style:italic;color:var(--fg-3);font-family:var(--serif-body)">Generating recap…</p></div>';
-  $('ai-modal').style.display = 'flex';
-  setTimeout(function() {
-    var prog = formatProgress(e);
-    var fallback = '<strong>Where you left off in ' + esc(e.title) + ':</strong><br><br>'
-      + (prog ? 'You\'re at <strong>' + esc(prog) + '</strong>.<br><br>' : '')
-      + (e.notes ? 'Your notes: "' + esc(e.notes) + '"<br><br>' : '')
-      + '<em style="color:var(--fg-3)">Connect a Breadcrumbs+ account for a full AI-generated recap.</em>';
-    $('ai-body').innerHTML = SUMMARIES[e.title] || fallback;
-  }, 1200);
-}
-
-function closeAI() { $('ai-modal').style.display = 'none'; }
 
 // ── Analytics ────────────────────────────────────────────────
 function generateHeat(entries) {
-  var now   = new Date();
+  var now    = new Date();
   var weekMs = 7 * 24 * 3600 * 1000;
-  var heat  = {};
+  var types  = ['book','show','movie','game','podcast'];
+  var heat   = {};
+  types.forEach(function(t) {
+    heat[t] = {};
+    for (var i = 0; i < 26; i++) heat[t][i] = 0;
+  });
   entries.forEach(function(e) {
-    var d = new Date(e.createdAt);
-    var weeksAgo = Math.floor((now - d) / weekMs);
+    if (!heat[e.type]) return;
+    var weeksAgo = Math.floor((now - new Date(e.createdAt)) / weekMs);
     if (weeksAgo >= 0 && weeksAgo < 26) {
       var idx = 25 - weeksAgo;
-      if (!heat[idx]) heat[idx] = {level:0, type:e.type};
-      heat[idx].level = Math.min(3, heat[idx].level + 1);
+      heat[e.type][idx] = Math.min(3, heat[e.type][idx] + 1);
     }
   });
   return heat;
@@ -1125,13 +1419,16 @@ function updateStats() {
   var max = Math.max(1, Math.max.apply(null, Object.values(counts)));
   var heatData = generateHeat(entries);
 
-  // Build heat cells (26 cols × 5 rows = 130 cells, one per week per "row")
+  // Build heat cells: 5 rows (one per category) × 26 cols (weeks)
+  var heatTypes = ['book','show','movie','game','podcast'];
   var heatCells = '';
-  for (var i = 0; i < 130; i++) {
-    var weekIdx = i % 26;  // columns first
-    var h = heatData[weekIdx] || {level:0, type:'book'};
-    heatCells += '<div class="bc-heat__cell bc-heat__cell--' + h.type + '"'
-      + (h.level ? ' data-level="' + h.level + '"' : '') + '></div>';
+  for (var row = 0; row < 5; row++) {
+    var t = heatTypes[row];
+    for (var col = 0; col < 26; col++) {
+      var level = heatData[t] ? (heatData[t][col] || 0) : 0;
+      heatCells += '<div class="bc-heat__cell bc-heat__cell--' + t + '"'
+        + (level ? ' data-level="' + level + '"' : '') + '></div>';
+    }
   }
 
   var html =
@@ -1142,11 +1439,11 @@ function updateStats() {
     + types.map(function(t) {
         return '<div class="bc-bar">'
           + '<span class="bc-bar__label">'
-          + '<span class="bc-bar__label-dot" style="background:' + DOT_COLORS[t] + '"></span>'
+          + '<span class="bc-bar__label-dot bc-bar__label-dot--' + t + '"></span>'
           + LABELS[t] + 's'
           + '</span>'
           + '<div class="bc-bar__track">'
-          + '<div class="bc-bar__fill" style="width:' + (counts[t]/max*100) + '%;background:' + DOT_COLORS[t] + '"></div>'
+          + '<div class="bc-bar__fill bc-bar__fill--' + t + '" style="width:' + (counts[t]/max*100) + '%"></div>'
           + '</div>'
           + '<span class="bc-bar__count">' + counts[t] + '</span>'
           + '</div>';
@@ -1158,21 +1455,15 @@ function updateStats() {
     + '<p class="bc-heat__sub">Every breadcrumb dropped, the past six months.</p>'
     + '<div class="bc-heat__grid">' + heatCells + '</div>'
     + '<div class="bc-heat__legend"><span>6 mo ago</span><span>3 mo ago</span><span>Today</span></div>'
-    + '<div class="bc-heat__swatches">'
-    + types.map(function(t) {
-        return '<span class="bc-heat__swatch">'
-          + '<span class="bc-heat__swatch-dot bc-heat__swatch-dot--' + t + '"></span>'
-          + '<span>' + LABELS[t] + 's</span>'
-          + '</span>';
-      }).join('')
-    + '</div>'
     + '</div>'
 
-    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">'
     + [
         {n: sc[STATUS.inProgress]||0, l:'In progress'},
         {n: sc[STATUS.completed]||0,  l:'Completed'},
         {n: sc[STATUS.onHold]||0,     l:'On hold'},
+        {n: sc[STATUS.wantTo]||0,     l:'Want to'},
+        {n: sc[STATUS.abandoned]||0,  l:'Abandoned'},
         {n: entries.length,           l:'Total entries'}
       ].map(function(c) {
         return '<div class="bc-statuscell">'
@@ -1182,6 +1473,38 @@ function updateStats() {
       }).join('')
     + '</div>';
 
+  // Consumption totals
+  var totalPages = entries
+    .filter(function(e) { return e.type === 'book' && e.progress && e.progress.currentPage; })
+    .reduce(function(sum, e) { return sum + (e.progress.currentPage || 0); }, 0);
+  var totalHours = Math.round(entries
+    .filter(function(e) { return e.type === 'game' && e.progress && e.progress.playtimeMinutes; })
+    .reduce(function(sum, e) { return sum + (e.progress.playtimeMinutes || 0); }, 0) / 60);
+  var totalEpisodes = entries
+    .filter(function(e) { return e.type === 'show' && e.progress && e.progress.episode; })
+    .reduce(function(sum, e) { return sum + (e.progress.episode || 0); }, 0);
+
+  // Completion rate & avg rating
+  var startedCount = (sc[STATUS.completed]||0) + (sc[STATUS.abandoned]||0);
+  var completionRate = startedCount > 0 ? Math.round((sc[STATUS.completed]||0) / startedCount * 100) : null;
+  var ratedEntries = entries.filter(function(e) { return e.rating; });
+  var avgRating = ratedEntries.length > 0
+    ? Math.round(ratedEntries.reduce(function(sum, e) { return sum + e.rating; }, 0) / ratedEntries.length * 10) / 10
+    : null;
+
+  if (totalPages || totalHours || totalEpisodes) {
+    html += '<div class="bc-consumption">'
+      + '<div class="bc-consumption__title">Across all breadcrumbs</div>'
+      + '<div class="bc-consumption__row">'
+      + (totalPages    ? '<div class="bc-consumption__stat"><span class="bc-consumption__n">' + totalPages.toLocaleString() + '</span><span class="bc-consumption__l">pages read</span></div>' : '')
+      + (totalEpisodes ? '<div class="bc-consumption__stat"><span class="bc-consumption__n">' + totalEpisodes + '</span><span class="bc-consumption__l">episodes</span></div>' : '')
+      + (totalHours    ? '<div class="bc-consumption__stat"><span class="bc-consumption__n">' + totalHours + 'h</span><span class="bc-consumption__l">gaming</span></div>' : '')
+      + ((completionRate !== null) ? '<div class="bc-consumption__stat"><span class="bc-consumption__n">' + completionRate + '%</span><span class="bc-consumption__l">completion rate</span></div>' : '')
+      + (avgRating ? '<div class="bc-consumption__stat"><span class="bc-consumption__n">★ ' + avgRating + '</span><span class="bc-consumption__l">avg rating</span></div>' : '')
+      + '</div>'
+      + '</div>';
+  }
+
   container.innerHTML = html;
 }
 
@@ -1190,9 +1513,8 @@ function renderSettings() {
   var container = $('settings-container');
   if (!container) return;
 
-  var handle = session ? '@' + session.handle : 'Demo User';
-  var did    = session ? session.did : 'Local storage only';
-  var theme  = document.documentElement.getAttribute('data-theme') || 'day';
+  var handle  = session ? '@' + session.handle : 'Demo User';
+  var did     = session ? session.did : 'Local storage only';
   var largeText  = document.getElementById('app').classList.contains('is-large-text');
   var hideCovers = document.getElementById('app').classList.contains('is-hide-covers');
 
@@ -1212,11 +1534,34 @@ function renderSettings() {
     // ── Display
     + '<div class="bc-settings__section">'
     + '<div class="bc-settings__head">Display</div>'
-    + '<button class="bc-settings__item" id="s-theme">'
-    + '<span class="bc-settings__item-label">Theme</span>'
-    + '<span class="bc-settings__item-detail" id="theme-label">' + (theme === 'night' ? 'Night library' : 'Parchment') + '</span>'
-    + SVG_CHEV
-    + '</button>'
+    + '<div class="bc-settings__item bc-settings__item--stack">'
+    + '<span class="bc-settings__item-label">Palette</span>'
+    + '<div class="bc-palette-picker">'
+    + PALETTES.map(function(p) {
+        return '<button type="button" class="bc-palette-swatch' + (themePalette === p.id ? ' is-active' : '') + '"'
+          + ' title="' + p.name + '"'
+          + ' onclick="applyPalette(\'' + p.id + '\')">'
+          + '<div class="bc-palette-swatch__light" style="background:' + p.light.bg + '">'
+          + '<div class="bc-palette-swatch__dot" style="background:' + p.accent + '"></div>'
+          + '</div>'
+          + '<div class="bc-palette-swatch__dark" style="background:' + p.dark.bg + ';color:' + p.dark.fg + '">'
+          + '<span class="bc-palette-swatch__name">' + p.name + '</span>'
+          + '</div>'
+          + '</button>';
+      }).join('')
+    + '</div>'
+    + '</div>'
+    + '<div class="bc-settings__item bc-settings__item--stack">'
+    + '<span class="bc-settings__item-label">Mode</span>'
+    + '<div class="bc-mode-btns">'
+    + ['system','light','dark'].map(function(m) {
+        return '<button type="button" class="bc-mode-btn' + (themeMode === m ? ' is-active' : '') + '"'
+          + ' onclick="applyMode(\'' + m + '\')">'
+          + (m === 'system' ? 'System' : m === 'light' ? 'Light' : 'Dark')
+          + '</button>';
+      }).join('')
+    + '</div>'
+    + '</div>'
     + '<button class="bc-settings__item" id="s-large-text">'
     + '<span class="bc-settings__item-label">Larger type</span>'
     + '<span class="bc-toggle' + (largeText ? ' is-on' : '') + '" role="switch" aria-checked="' + largeText + '"></span>'
@@ -1225,20 +1570,18 @@ function renderSettings() {
     + '<span class="bc-settings__item-label">Hide cover art</span>'
     + '<span class="bc-toggle' + (hideCovers ? ' is-on' : '') + '" role="switch" aria-checked="' + hideCovers + '"></span>'
     + '</button>'
+    + '<div class="bc-settings__item bc-settings__item--stack">'
+    + '<span class="bc-settings__item-label">Accent color</span>'
+    + '<div class="bc-color-swatches bc-color-swatches--sm">'
+    + LIST_COLORS.map(function(hex) {
+        var active = (localStorage.getItem('bc_accent') || '') === hex;
+        return '<button type="button" class="bc-color-swatch' + (active ? ' is-active' : '') + '"'
+          + ' style="background:' + hex + '" aria-label="Accent ' + hex + '"'
+          + ' onclick="pickAccentColor(\'' + hex + '\')"></button>';
+      }).join('')
     + '</div>'
-
-    // ── Subscription
-    + buildSubSection()
-
-    // ── AI features (only shown when subscribed)
-    + (subActive
-      ? '<div class="bc-settings__section">'
-        + '<div class="bc-settings__head">AI features</div>'
-        + '<button class="bc-settings__item"><span class="bc-settings__item-label">Catch me up</span><span class="bc-settings__item-detail">Weekly</span>' + SVG_CHEV + '</button>'
-        + '<button class="bc-settings__item"><span class="bc-settings__item-label">Summarize new entries</span><span class="bc-toggle is-on" role="switch" aria-checked="true"></span></button>'
-        + '<button class="bc-settings__item"><span class="bc-settings__item-label">Personal reading insights</span><span class="bc-toggle is-on" role="switch" aria-checked="true"></span></button>'
-        + '</div>'
-      : '')
+    + '</div>'
+    + '</div>'
 
     // ── Your data
     + '<div class="bc-settings__section">'
@@ -1265,76 +1608,14 @@ function renderSettings() {
   container.innerHTML = html;
 
   // Bind settings handlers
-  $('s-theme').onclick       = toggleTheme;
   $('s-large-text').onclick  = toggleLargeText;
   $('s-hide-covers').onclick = toggleHideCovers;
   $('s-export').onclick      = exportData;
   $('s-refresh').onclick     = refreshEntries;
   $('s-logout').onclick      = logout;
 
-  // Subscription handlers
-  if ($('s-manage-sub'))   $('s-manage-sub').onclick   = openBillingPortal;
-  if ($('s-upgrade-mo'))   $('s-upgrade-mo').onclick   = function() { startCheckout('monthly'); };
-  if ($('s-upgrade-yr'))   $('s-upgrade-yr').onclick   = function() { startCheckout('annual'); };
-  if ($('s-upgrade-life')) $('s-upgrade-life').onclick = function() { startCheckout('lifetime'); };
 }
 
-function buildSubSection() {
-  var TIER_LABELS = { monthly:'Monthly', annual:'Annual', lifetime:'Lifetime' };
-  if (subActive) {
-    var tierLabel = TIER_LABELS[subTier] || 'Active';
-    var isLifetime = subTier === 'lifetime';
-    return '<div class="bc-settings__section">'
-      + '<div class="bc-settings__head">Subscription</div>'
-      + '<div class="bc-sub-card bc-sub-card--active">'
-      + '<div class="bc-sub-card__mark">✦</div>'
-      + '<div class="bc-sub-card__body">'
-      + '<div class="bc-sub-card__tier">Breadcrumbs+</div>'
-      + '<div class="bc-sub-card__plan">' + tierLabel + (isLifetime ? ' · never expires' : '') + '</div>'
-      + '</div>'
-      + '</div>'
-      + (isLifetime
-          ? ''
-          : '<button class="bc-settings__item" id="s-manage-sub"><span class="bc-settings__item-label">Manage subscription</span>' + SVG_CHEV + '</button>')
-      + '</div>';
-  }
-
-  // Upgrade UI — not subscribed
-  var canBuy = !!(session && session.did);
-  var disabledAttr = canBuy ? '' : ' disabled title="Sign in with Bluesky to subscribe"';
-  return '<div class="bc-settings__section">'
-    + '<div class="bc-settings__head">Breadcrumbs+</div>'
-    + '<p class="bc-sub-pitch">AI recaps, personalized insights, and priority support. Pay only enough to cover costs.</p>'
-    + '<div class="bc-sub-tiers">'
-
-    // Monthly
-    + '<div class="bc-sub-tier">'
-    + '<div class="bc-sub-tier__name">Monthly</div>'
-    + '<div class="bc-sub-tier__price">$1.99<span>/mo</span></div>'
-    + '<button class="bc-btn bc-btn--secondary bc-btn--block bc-sub-tier__btn" id="s-upgrade-mo"' + disabledAttr + '>Choose</button>'
-    + '</div>'
-
-    // Annual — highlighted
-    + '<div class="bc-sub-tier bc-sub-tier--featured">'
-    + '<div class="bc-sub-tier__badge">Best value</div>'
-    + '<div class="bc-sub-tier__name">Annual</div>'
-    + '<div class="bc-sub-tier__price">$14.99<span>/yr</span></div>'
-    + '<div class="bc-sub-tier__save">Save 37%</div>'
-    + '<button class="bc-btn bc-btn--primary bc-btn--block bc-sub-tier__btn" id="s-upgrade-yr"' + disabledAttr + '>Choose</button>'
-    + '</div>'
-
-    // Lifetime
-    + '<div class="bc-sub-tier">'
-    + '<div class="bc-sub-tier__name">Lifetime</div>'
-    + '<div class="bc-sub-tier__price">$39<span> once</span></div>'
-    + '<div class="bc-sub-tier__save">Founding member</div>'
-    + '<button class="bc-btn bc-btn--secondary bc-btn--block bc-sub-tier__btn" id="s-upgrade-life"' + disabledAttr + '>Choose</button>'
-    + '</div>'
-
-    + '</div>'
-    + (!canBuy ? '<p class="bc-sub-note">Sign in with Bluesky to subscribe.</p>' : '')
-    + '</div>';
-}
 
 function toggleLargeText() {
   var app = $('app');
@@ -1380,6 +1661,8 @@ function toast(msg, type) {
 function restorePrefs() {
   if (localStorage.getItem('bc_large_text')  === 'true') $('app').classList.add('is-large-text');
   if (localStorage.getItem('bc_hide_covers') === 'true') $('app').classList.add('is-hide-covers');
+  var savedAccent = localStorage.getItem('bc_accent');
+  if (savedAccent) document.documentElement.style.setProperty('--accent', savedAccent);
 }
 
 // ── Boot ──────────────────────────────────────────────────────
@@ -1387,25 +1670,4 @@ document.addEventListener('DOMContentLoaded', function() {
   restorePrefs();
   init();
 
-  // Handle Stripe return redirects
-  var params = new URLSearchParams(window.location.search);
-  if (params.get('sub') === 'success') {
-    history.replaceState(null, '', window.location.pathname);
-    // Re-check after a brief delay to let webhook settle
-    setTimeout(function() {
-      checkSubStatus().then(function() {
-        toast('Welcome to Breadcrumbs+! AI features are now unlocked.', 'success');
-        switchTab('settings');
-      });
-    }, 1500);
-  } else if (params.get('sub') === 'cancel') {
-    history.replaceState(null, '', window.location.pathname);
-    toast('Checkout cancelled — no charge was made.', 'info');
-  }
-
-  // Return from settings billing portal
-  if (params.get('tab') === 'settings') {
-    history.replaceState(null, '', window.location.pathname);
-    switchTab('settings');
-  }
 });

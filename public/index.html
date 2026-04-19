@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-palette="ink">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -125,30 +125,20 @@
             Podcasts
           </button>
         </div>
+
+        <!-- Status filter bar -->
+        <div class="bc-sfilters" id="status-filter-bar" aria-label="Filter by status">
+          <button class="bc-sfilter is-active" data-sf="app.breadcrumbs.defs#inProgress">In Progress</button>
+          <button class="bc-sfilter" data-sf="app.breadcrumbs.defs#wantTo">Want</button>
+          <button class="bc-sfilter" data-sf="app.breadcrumbs.defs#completed">Done</button>
+          <button class="bc-sfilter" data-sf="app.breadcrumbs.defs#abandoned">Abandoned</button>
+          <button class="bc-sfilter" data-sf="app.breadcrumbs.defs#onHold">On Hold</button>
+        </div>
       </div>
 
       <!-- Two-column body (single col mobile, side-by-side desktop) -->
       <div class="bc-timeline-body">
         <div class="bc-main-col">
-
-          <!-- Catchup hero (shown when entries exist) -->
-          <div id="catchup-hero" class="bc-catchup hidden">
-            <div class="bc-catchup__kicker">
-              <span class="bc-catchup__kicker-dot"></span>
-              <svg width="11" height="11" viewBox="0 0 14 14" fill="currentColor" aria-hidden="true"><path d="M7 0l1.1 4.9L13 7l-4.9 1.1L7 14l-1.1-4.9L1 7l4.9-1.1z"/></svg>
-              AI recap ready
-            </div>
-            <div class="bc-catchup__title">Catch me up on where I left off</div>
-            <div class="bc-catchup__body">A personalized recap of everything in progress, from your own breadcrumbs.</div>
-            <div class="bc-catchup__foot">
-              <button class="bc-catchup__btn" id="catchup-open-btn">
-                <svg width="12" height="12" viewBox="0 0 14 14" fill="currentColor" aria-hidden="true"><path d="M7 0l1.1 4.9L13 7l-4.9 1.1L7 14l-1.1-4.9L1 7l4.9-1.1z"/></svg>
-                Read recap
-              </button>
-              <span class="bc-catchup__meta">Breadcrumbs+</span>
-            </div>
-            <button class="bc-catchup__dismiss" id="catchup-dismiss-btn" aria-label="Dismiss">✕</button>
-          </div>
 
           <!-- Entries -->
           <div class="bc-content">
@@ -206,12 +196,12 @@
     </div><!-- /lists-panel -->
 
 
-    <!-- ─── READING / ANALYTICS ───────────────────────────── -->
+    <!-- ─── STATUS / ANALYTICS ────────────────────────────── -->
     <div id="analytics-panel" class="tab-panel">
 
       <header class="bc-header">
         <div class="bc-header__title">
-          <span class="bc-header__word">Reading</span>
+          <span class="bc-header__word">Status</span>
         </div>
       </header>
 
@@ -263,7 +253,7 @@
         <span class="bc-tab__icon" aria-hidden="true">
           <svg viewBox="0 0 22 22" fill="none"><line x1="3" y1="18" x2="19" y2="18" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><rect x="4"  y="12" width="3" height="6" rx=".5" fill="currentColor" opacity=".6"/><rect x="9"  y="8"  width="3" height="10" rx=".5" fill="currentColor" opacity=".8"/><rect x="14" y="5"  width="3" height="13" rx=".5" fill="currentColor"/></svg>
         </span>
-        <span class="bc-tab__label">Reading</span>
+        <span class="bc-tab__label">Status</span>
       </button>
 
       <button class="bc-tab" data-tab="settings" role="tab" aria-selected="false">
@@ -328,24 +318,18 @@
           </div>
         </div>
 
-        <!-- Search -->
+        <!-- Search / Title -->
         <div class="bc-field" id="search-group">
-          <div class="bc-label">Search</div>
+          <div class="bc-label">Title</div>
           <div class="bc-search-wrap">
             <input class="bc-input" id="f-search"
-              placeholder="Search books, shows, films, games…"
+              placeholder="Search or enter title…"
               autocomplete="off" style="padding-left:42px">
             <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--fg-3);pointer-events:none" aria-hidden="true">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/><line x1="10.5" y1="10.5" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
             </span>
             <div id="search-results" class="bc-search-drop hidden"></div>
           </div>
-        </div>
-
-        <!-- Title (manual fallback) -->
-        <div class="bc-field" id="title-group">
-          <div class="bc-label">Title</div>
-          <input class="bc-input" id="f-title" placeholder="Title">
         </div>
 
         <!-- Status -->
@@ -439,27 +423,48 @@
   </div><!-- /entry-modal -->
 
 
-  <!-- ═══ AI / CATCH-ME-UP MODAL ══════════════════════════════ -->
-  <div class="bc-modal-bg" id="ai-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="ai-title">
+  <!-- ═══ LIST MODAL ══════════════════════════════════════════ -->
+  <div class="bc-modal-bg" id="list-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="list-modal-title">
     <div class="bc-modal">
       <div class="bc-modal__grip" aria-hidden="true"></div>
 
       <div class="bc-modal__head">
-        <span class="bc-modal__title" id="ai-modal-head">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="var(--accent)" aria-hidden="true" style="margin-right:6px;vertical-align:-1px"><path d="M7 0l1.1 4.9L13 7l-4.9 1.1L7 14l-1.1-4.9L1 7l4.9-1.1z"/></svg>
-          <span id="ai-title">Catch me up</span>
-        </span>
-        <button class="bc-modal__close" id="ai-close" aria-label="Close">✕</button>
+        <span class="bc-modal__title" id="list-modal-title">New list</span>
+        <button class="bc-modal__close" id="list-modal-close" aria-label="Close">✕</button>
       </div>
 
       <div class="bc-modal__body">
-        <div id="ai-body" class="bc-ai-body"></div>
+
+        <div class="bc-field">
+          <label class="bc-label" for="list-name">Name</label>
+          <input class="bc-input" id="list-name" type="text" placeholder="Winter reads, rewatch queue…" maxlength="128" autocomplete="off">
+        </div>
+
+        <div class="bc-field">
+          <label class="bc-label" for="list-desc">Description <span style="font-weight:400;color:var(--fg-4)">(optional)</span></label>
+          <textarea class="bc-input bc-textarea" id="list-desc" placeholder="A note about this list…" maxlength="500" rows="2"></textarea>
+        </div>
+
+        <div class="bc-field">
+          <label class="bc-label">Color</label>
+          <div class="bc-color-swatches" id="list-color-swatches"></div>
+        </div>
+
+        <div class="bc-field">
+          <label class="bc-label">Entries <span class="bc-label-aside" id="list-entry-count"></span></label>
+          <div class="bc-list-entry-picker" id="list-entry-picker"></div>
+        </div>
+
       </div>
 
-      <div class="bc-ai-foot">Catch Me Up · Breadcrumbs</div>
-
+      <div class="bc-modal__actions">
+        <button class="bc-btn bc-btn--danger bc-btn--sm" id="list-modal-delete" style="display:none;margin-right:auto">Delete</button>
+        <button class="bc-btn bc-btn--secondary" id="list-modal-cancel">Cancel</button>
+        <button class="bc-btn bc-btn--primary" id="list-modal-save">Save list</button>
+      </div>
     </div>
-  </div><!-- /ai-modal -->
+  </div><!-- /list-modal -->
+
 
 
   <!-- ═══ UTILITY ══════════════════════════════════════════════ -->
