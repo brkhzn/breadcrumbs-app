@@ -6,7 +6,27 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#F5EFE2" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#14110C"  media="(prefers-color-scheme: dark)">
-  <title>Breadcrumbs</title>
+  <title>Breadcrumbs — Never lose your place again</title>
+  <meta name="description" content="Track books, shows, films, games, and podcasts. Your data lives on your own server — portable, exportable, forever yours.">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Breadcrumbs — Never lose your place again">
+  <meta property="og:description" content="Track books, shows, films, games, and podcasts. Your data lives on your own server — portable, exportable, forever yours.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://breadcrumbs.app">
+  <meta property="og:image" content="https://breadcrumbs.app/icons/og.png">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Breadcrumbs">
+  <meta name="twitter:description" content="Never lose your place again. Track books, shows, films, games, and podcasts.">
+  <meta name="twitter:image" content="https://breadcrumbs.app/icons/og.png">
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Breadcrumbs">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Lora:ital,wght@0,400;0,500;1,400;1,500&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -164,8 +184,8 @@
             <div id="entries" class="bc-entries"></div>
             <div id="empty" class="bc-empty hidden">
               <svg width="32" height="32" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M5 3h10a1 1 0 011 1v13l-6-3.5L4 17V4a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/></svg>
-              <h3>No breadcrumbs yet</h3>
-              <p>Tap + to log where you left off in a book, show, film, game, or podcast.</p>
+              <h3 id="empty-title">Nothing here yet</h3>
+              <p id="empty-body">Try a different filter, or tap + to log something new.</p>
             </div>
           </div>
 

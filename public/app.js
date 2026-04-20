@@ -493,7 +493,16 @@ async function signIn() {
     await loadEntries();
     toast('Signed in as @' + session.handle);
   } catch(e) {
-    showAuthError(e.message || 'Sign in failed. Check your handle and app password.');
+    var msg = e.message || '';
+    if (msg.toLowerCase().includes('invalid') || msg.toLowerCase().includes('password') || msg.toLowerCase().includes('identifier')) {
+      showAuthError('Wrong handle or app password. Make sure you\'re using an App Password from bsky.app/settings, not your main password.');
+    } else if (msg.toLowerCase().includes('not found') || msg.toLowerCase().includes('resolve')) {
+      showAuthError('Handle not found. Try including the full handle, e.g. you.bsky.social');
+    } else if (msg.toLowerCase().includes('fetch') || msg.toLowerCase().includes('network') || msg === '') {
+      showAuthError('Connection failed. Check your internet and try again.');
+    } else {
+      showAuthError(msg || 'Sign in failed. Check your handle and app password.');
+    }
   } finally {
     $('signin-btn').textContent = 'Continue';
     $('signin-btn').disabled = false;
@@ -569,22 +578,26 @@ function loadDemoEntries() {
        authors:['Andy Weir'],
        progress:{currentPage:284,totalPages:476,updatedAt:new Date(now-2*86400000).toISOString()},
        status:STATUS.inProgress,genres:['Sci-Fi'],rating:5,
+       description:'The lone survivor of a desperate last-chance mission wakes up with no memory of who he is or how he got here — millions of miles from home. His only companion is an alien from a distant star system. Together they must solve the greatest mystery in the universe to save Earth.',
        notes:'Rocky is the best first contact I\'ve read. Genuinely moved by the engineering.',
        coverUrl:'https://covers.openlibrary.org/b/isbn/9780593135204-M.jpg',
        createdAt:new Date(now-2*86400000).toISOString()},
       {rkey:'2',collection:'app.breadcrumbs.show',type:'show',title:'Severance',
        progress:{season:1,episode:7,updatedAt:new Date(now-4*86400000).toISOString()},
        status:STATUS.inProgress,genres:['Thriller'],
+       description:'Mark leads a team of office workers whose memories have been surgically divided between their work and personal lives. When a mysterious colleague appears outside of work, it begins a journey to discover the truth about their jobs.',
        notes:'Waffle party coming up.',
        coverUrl:'https://image.tmdb.org/t/p/w200/lFf6LLrQjYZKqiPuqcvzL8Fmgmt.jpg',
        createdAt:new Date(now-4*86400000).toISOString()},
       {rkey:'3',collection:'app.breadcrumbs.movie',type:'movie',title:'Oppenheimer',
        status:STATUS.completed,genres:['Drama'],rating:4,
+       description:'The story of J. Robert Oppenheimer and his role in the development of the atomic bomb during World War II, and the consequences that followed.',
        notes:'Trinity test was incredible.',
        coverUrl:'https://image.tmdb.org/t/p/w200/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg',
        createdAt:new Date(now-6*86400000).toISOString()},
       {rkey:'4',collection:'app.breadcrumbs.game',type:'game',title:"Baldur's Gate 3",
        developer:'Larian Studios',
+       description:'Gather your party and return to the Forgotten Realms in a tale of fellowship and betrayal, sacrifice and survival, and the lure of absolute power.',
        progress:{playtimeMinutes:2520,completionPercent:42,narrativePosition:'Act 2 — Moonrise Towers',
                  updatedAt:new Date(now-9*86400000).toISOString()},
        status:STATUS.inProgress,genres:['RPG'],rating:5,
@@ -942,6 +955,11 @@ function render() {
   if (!shown.length) {
     list.innerHTML = '';
     empty.classList.remove('hidden');
+    var isFiltered = filterType !== 'all' || filterStatuses.length > 0;
+    $('empty-title').textContent = isFiltered ? 'No matches' : 'Drop your first breadcrumb';
+    $('empty-body').textContent  = isFiltered
+      ? 'Nothing here with those filters. Try clearing them, or tap + to add something new.'
+      : 'Start tracking a book, show, film, game, or podcast — and always know exactly where you left off.';
     return;
   }
   empty.classList.add('hidden');
@@ -1087,8 +1105,8 @@ function openEdit(rkey, collection) {
   $('f-search').value = '';
   $('delete-btn').classList.remove('hidden');
 
-  if (e.coverUrl) {
-    selectedMedia = {title:e.title, coverUrl:e.coverUrl};
+  if (e.coverUrl || e.description) {
+    selectedMedia = {title:e.title, coverUrl:e.coverUrl||null, description:e.description||null};
     $('selected-media').classList.remove('hidden');
     $('selected-cover').style.cssText = 'background-image:url(' + esc(e.coverUrl) + ');background-size:cover;background-position:center';
     $('selected-title').textContent = e.title;
@@ -1280,7 +1298,8 @@ function searchMedia(query) {
   if      (selType === 'book')  searchBooks(query);
   else if (selType === 'show')  searchTMDB(query, 'tv');
   else if (selType === 'movie') searchTMDB(query, 'movie');
-  else if (selType === 'game')  searchGames(query);
+  else if (selType === 'game')    searchGames(query);
+  else if (selType === 'podcast') searchPodcasts(query);
   else results.innerHTML = '<div class="bc-search-msg">Enter title manually.</div>';
 }
 
@@ -1371,6 +1390,25 @@ function searchOpenLibrary(query) {
           year:   doc.first_publish_year ? String(doc.first_publish_year) : '',
           cover:  doc.cover_i ? 'https://covers.openlibrary.org/b/id/' + doc.cover_i + '-M.jpg' : '',
           pages:  doc.number_of_pages_median || ''
+        };
+      }));
+    })
+    .catch(function() {
+      $('search-results').innerHTML = '<div class="bc-search-msg">Search unavailable — enter title manually.</div>';
+    });
+}
+
+function searchPodcasts(query) {
+  fetch('https://itunes.apple.com/search?term=' + encodeURIComponent(query) + '&media=podcast&entity=podcast&limit=6')
+    .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function(data) {
+      if (!data.results?.length) { renderSearchResults([]); return; }
+      renderSearchResults(data.results.map(function(item) {
+        return {
+          title:       item.collectionName || item.trackName || '',
+          author:      item.artistName || '',
+          cover:       item.artworkUrl100 || '',
+          description: item.genres ? item.genres.join(', ') : ''
         };
       }));
     })
