@@ -637,19 +637,33 @@ function renderLists() {
   container.innerHTML = '<div class="bc-lists">'
     + lists.map(function(l) {
       var count = l.items ? l.items.length : 0;
-      var types = (l.items || []).map(function(rkey) {
-        var e = entries.find(function(e) { return e.rkey === rkey; });
-        return e ? LABELS[e.type] : null;
+      var itemEntries = (l.items || []).map(function(rkey) {
+        return entries.find(function(e) { return e.rkey === rkey; });
       }).filter(Boolean);
-      var uniqTypes = types.filter(function(t,i,a) { return a.indexOf(t) === i; });
+      var uniqTypes = itemEntries.map(function(e) { return LABELS[e.type]; })
+        .filter(function(t,i,a) { return a.indexOf(t) === i; });
       var meta = count + (count === 1 ? ' entry' : ' entries')
         + (uniqTypes.length ? ' · ' + uniqTypes.join(', ') : '');
-      return '<button class="bc-list-card" style="--list-color:' + esc(l.color||'#5F6B43') + '"'
-        + ' onclick="openListDetail(\'' + l.rkey + '\')">'
-        + '<div class="bc-list-card__dot"></div>'
-        + '<div class="bc-list-card__body">'
+
+      var covers = itemEntries.slice(0, 3).map(function(e) {
+        return e.coverUrl
+          ? 'background-image:url(' + esc(e.coverUrl) + ');background-size:cover;background-position:center'
+          : 'background:' + (COVER_BG[e.type] || COVER_BG.book);
+      });
+      while (covers.length < 3) {
+        covers.push('background:' + (COVER_BG.book));
+      }
+
+      var stackHtml = '<div class="bc-list-card__stack" aria-hidden="true">'
+        + covers.map(function(s) { return '<div class="bc-list-card__stack-item" style="' + s + '"></div>'; }).join('')
+        + '</div>';
+
+      return '<button class="bc-list-card" onclick="openListDetail(\'' + l.rkey + '\')">'
+        + stackHtml
+        + '<div class="bc-list-card__info">'
         + '<div class="bc-list-card__name">' + esc(l.name) + '</div>'
-        + '<div class="bc-list-card__meta">' + esc(meta) + '</div>'
+        + '<div class="bc-list-card__count">' + esc(meta) + '</div>'
+        + (l.description ? '<div class="bc-list-card__note">' + esc(l.description) + '</div>' : '')
         + '</div>'
         + SVG_CHEV
         + '</button>';
@@ -694,7 +708,7 @@ function renderListDetail(rkey) {
           : 'background:' + (COVER_BG[e.type]||COVER_BG.book);
         var typeLabel = LABELS[e.type] || e.type;
         var subtitle  = e.authors ? e.authors[0] : (e.creator || e.developer || '');
-        return '<button class="bc-card bc-card--' + e.type + '" onclick="openEdit(\'' + e.rkey + '\',\'' + (e.collection||'') + '\')">'
+        return '<button class="bc-card bc-card--' + e.type + '" onclick="openDetail(\'' + e.rkey + '\',\'' + (e.collection||'') + '\')">'
           + '<div class="bc-card__spine" aria-hidden="true"></div>'
           + '<div class="bc-card__body">'
           + '<div class="bc-card__cover" style="' + coverStyle + '" aria-hidden="true"></div>'
@@ -1629,11 +1643,37 @@ function renderSettings() {
     + '</div>'
 
     // ── About
+    + '<div class="bc-settings__section">'
+    + '<div class="bc-settings__head">About</div>'
     + '<div class="bc-about">'
     + SVG_LOGOMARK
     + '<div class="bc-about__name">Breadcrumbs</div>'
-    + '<div class="bc-about__ver">v2.1.0 · built on AT Protocol</div>'
+    + '<div class="bc-about__ver">v2.1.0 &middot; built on AT Protocol</div>'
     + '<div class="bc-about__tag">Made for keepers of reading journals.</div>'
+
+    + '<div class="bc-about__desc">'
+    + 'Breadcrumbs is a personal media log for people who never want to lose their place. '
+    + 'Track where you left off in books, shows, films, games, and podcasts &mdash; then pick up right where you stopped.'
+    + '</div>'
+
+    + '<div class="bc-about__section">'
+    + '<div class="bc-about__section-head">Your data, your rules</div>'
+    + '<div class="bc-about__section-body">'
+    + 'Everything you log is stored in your own Personal Data Server (PDS) &mdash; think of it as a private database that belongs to you, not us. '
+    + 'It uses AT Protocol, the same open standard that powers Bluesky.'
+    + '</div>'
+    + '<div class="bc-about__perks">'
+    + '<div class="bc-about__perk"><span class="bc-about__perk-dot"></span><span>Export all your data as JSON at any time</span></div>'
+    + '<div class="bc-about__perk"><span class="bc-about__perk-dot"></span><span>Move to any compatible app &mdash; no lock-in</span></div>'
+    + '<div class="bc-about__perk"><span class="bc-about__perk-dot"></span><span>Delete everything permanently, whenever you want</span></div>'
+    + '<div class="bc-about__perk"><span class="bc-about__perk-dot"></span><span>We never sell or share your information</span></div>'
+    + '</div>'
+    + '</div>'
+
+    + '<div class="bc-about__footer">'
+    + '<a href="https://bsky.app/profile/breadcrumbs.app" style="font-family:var(--sans-ui);font-size:11px;color:var(--fg-4);text-decoration:none">Follow on Bluesky</a>'
+    + '</div>'
+    + '</div>'
     + '</div>';
 
   container.innerHTML = html;
