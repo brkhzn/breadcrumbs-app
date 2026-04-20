@@ -1286,6 +1286,10 @@ input, textarea { font-family: inherit; }
   font-family: var(--serif-body); font-style: italic; font-size: 14px;
   color: var(--fg-2); line-height: 1.55; padding-left: 18px;
 }
+.bc-detail__synopsis {
+  font-family: var(--serif-body); font-size: 14px; color: var(--fg-2);
+  line-height: 1.65; font-style: italic;
+}
 
 .bc-history { display: flex; flex-direction: column; gap: 0; }
 .bc-history__item {
@@ -1401,6 +1405,25 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible {
 /* ── Desktop sidebar (hidden on mobile) ───────────────────── */
 .bc-desktop-sidebar { display: none; }
 
+/* ── Mobile scroll fix ───────────────────────────────────── */
+/* .bc-timeline-body must fill the flex column so .bc-content   */
+/* actually has a constrained height to scroll within.          */
+.bc-timeline-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+/* Other tab panels: .bc-content is a direct flex child */
+#lists-panel .bc-content,
+#analytics-panel .bc-content,
+#settings-panel .bc-content {
+  flex: 1;
+  min-height: 0;
+}
+/* Card buttons must not eat vertical touch gestures on iOS */
+.bc-card, .bc-list-card { touch-action: pan-y; }
+
 /* ── Desktop layout ──────────────────────────────────────── */
 @media (min-width:600px) {
   .bc-modal-bg { align-items:center; }
@@ -1425,6 +1448,11 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible {
 
 @media (min-width:900px) {
   .bc-timeline-body {
+    /* Reset mobile scroll — desktop uses window scroll */
+    flex: unset;
+    min-height: unset;
+    overflow-y: visible;
+    /* Row layout with sidebar */
     display: flex;
     align-items: flex-start;
     max-width: 1120px;

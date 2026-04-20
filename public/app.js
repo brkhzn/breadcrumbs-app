@@ -1208,10 +1208,11 @@ async function saveEntry() {
     notes:     $('f-notes').value.trim() || null,
     genres:    selGenre ? [selGenre] : null,
     rating:    selRating || null,
-    coverUrl:  selectedMedia?.coverUrl || null,
-    authors:   selectedMedia?.authors  || null,
-    creator:   selectedMedia?.creator  || null,
-    developer: selectedMedia?.developer || null
+    coverUrl:    selectedMedia?.coverUrl    || null,
+    authors:     selectedMedia?.authors     || null,
+    creator:     selectedMedia?.creator     || null,
+    developer:   selectedMedia?.developer   || null,
+    description: selectedMedia?.description || null
   };
 
   $('save-btn').textContent = 'Saving…';
@@ -1300,7 +1301,8 @@ function renderSearchResults(items) {
       + ' data-year="'      + esc(item.year||'')    + '"'
       + ' data-isbn13="'    + esc(item.isbn13||'')  + '"'
       + ' data-pages="'     + esc(String(item.pages||''))     + '"'
-      + ' data-developer="' + esc(item.developer||'') + '">'
+      + ' data-developer="'   + esc(item.developer||'')   + '"'
+      + ' data-description="' + esc((item.description||'').slice(0,600)) + '">'
       + '<div class="bc-search-row__cover" style="' + coverStyle + '" aria-hidden="true"></div>'
       + '<div>'
       + '<div class="bc-search-row__title">' + esc(item.title) + '</div>'
@@ -1320,9 +1322,10 @@ function searchTMDB(query, type) {
       if (!data.results?.length) { renderSearchResults([]); return; }
       renderSearchResults(data.results.slice(0,6).map(function(item) {
         return {
-          title: item.title || item.name,
-          year:  (item.release_date || item.first_air_date || '').slice(0,4),
-          cover: item.poster_path ? 'https://image.tmdb.org/t/p/w200' + item.poster_path : ''
+          title:       item.title || item.name,
+          year:        (item.release_date || item.first_air_date || '').slice(0,4),
+          cover:       item.poster_path ? 'https://image.tmdb.org/t/p/w200' + item.poster_path : '',
+          description: item.overview || ''
         };
       }));
     })
@@ -1340,12 +1343,13 @@ function searchBooks(query) {
           var v = item.volumeInfo;
           var isbn = (v.industryIdentifiers||[]).find(function(x) { return x.type==='ISBN_13'; });
           return {
-            title:  v.title || 'Unknown',
-            author: (v.authors||[]).join(', '),
-            year:   (v.publishedDate||'').slice(0,4),
-            cover:  v.imageLinks?.thumbnail || v.imageLinks?.smallThumbnail || '',
-            isbn13: isbn ? isbn.identifier : '',
-            pages:  v.pageCount || ''
+            title:       v.title || 'Unknown',
+            author:      (v.authors||[]).join(', '),
+            year:        (v.publishedDate||'').slice(0,4),
+            cover:       v.imageLinks?.thumbnail || v.imageLinks?.smallThumbnail || '',
+            isbn13:      isbn ? isbn.identifier : '',
+            pages:       v.pageCount || '',
+            description: v.description || ''
           };
         }));
       } else {
@@ -1396,11 +1400,12 @@ function searchGames(query) {
 function selectResult(el) {
   var d = el.dataset;
   selectedMedia = {
-    title:     d.title     || '',
-    coverUrl:  d.cover     || '',
-    authors:   d.author    ? [d.author] : null,
-    isbn13:    d.isbn13    || null,
-    developer: d.developer || null
+    title:       d.title       || '',
+    coverUrl:    d.cover       || '',
+    authors:     d.author      ? [d.author] : null,
+    isbn13:      d.isbn13      || null,
+    developer:   d.developer   || null,
+    description: d.description || null
   };
   $('selected-media').classList.remove('hidden');
   $('selected-cover').style.cssText = selectedMedia.coverUrl
@@ -1890,9 +1895,18 @@ function renderDetail(e) {
       + '</div>';
   }
 
+  var synopsisCard = '';
+  if (e.description) {
+    synopsisCard = '<div class="bc-detail__card">'
+      + '<div class="bc-detail__card-head">Synopsis</div>'
+      + '<p class="bc-detail__synopsis">' + esc(e.description) + '</p>'
+      + '</div>';
+  }
+
   scroll.innerHTML = heroHtml
     + '<div class="bc-detail__body">'
     + progCard
+    + synopsisCard
     + notesCard
     + ratingHtml
     + historyCard
