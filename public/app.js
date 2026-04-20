@@ -125,7 +125,7 @@ var CAT_SVG = {
 
 var SVG_CHEV = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" style="flex-shrink:0;color:var(--fg-4)"><polyline points="6,4 10,8 6,12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg>';
 
-var SVG_LOGOMARK = '<svg viewBox="0 0 64 64" width="28" height="28" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="none" stroke="currentColor" stroke-width="1.4" opacity="0.45"/><circle cx="32" cy="32" r="24" fill="currentColor" opacity="0.08"/><text x="32" y="42" text-anchor="middle" font-family="Cormorant Garamond,serif" font-style="italic" font-weight="600" font-size="34" fill="currentColor">B</text><circle cx="48" cy="46" r="1.8" fill="currentColor"/><circle cx="52" cy="42" r="1.2" fill="currentColor"/><circle cx="50" cy="50" r="1" fill="currentColor"/></svg>';
+var SVG_LOGOMARK = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="48" height="48" fill="none" aria-hidden="true"><circle cx="50" cy="50" r="46" fill="#7A2F2F"/><g fill="#F5EFE2"><circle cx="36" cy="22" r="2.4"/><circle cx="36" cy="32" r="2.4"/><circle cx="36" cy="42" r="2.4"/><circle cx="36" cy="52" r="2.4"/><circle cx="55" cy="66" r="14"/></g></svg>';
 
 var SVG_ATP = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 11L8 5l2.5 6M6.5 9h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
 
@@ -645,7 +645,9 @@ function renderLists() {
       var meta = count + (count === 1 ? ' entry' : ' entries')
         + (uniqTypes.length ? ' · ' + uniqTypes.join(', ') : '');
 
-      var covers = itemEntries.slice(0, 3).map(function(e) {
+      var covers = itemEntries.slice()
+        .sort(function(a, b) { return (b.coverUrl ? 1 : 0) - (a.coverUrl ? 1 : 0); })
+        .slice(0, 3).map(function(e) {
         return e.coverUrl
           ? 'background-image:url(' + esc(e.coverUrl) + ');background-size:cover;background-position:center'
           : 'background:' + (COVER_BG[e.type] || COVER_BG.book);
@@ -1633,7 +1635,7 @@ function renderSettings() {
     + '<div class="bc-settings__head">Your data</div>'
     + '<button class="bc-settings__item" id="s-export"><span class="bc-settings__item-label">Export as JSON</span><span class="bc-settings__item-detail">all entries &amp; lists</span>' + SVG_CHEV + '</button>'
     + '<button class="bc-settings__item" id="s-refresh"><span class="bc-settings__item-label">Refresh from PDS</span>' + SVG_CHEV + '</button>'
-    + '<button class="bc-settings__item"><span class="bc-settings__item-label">View on PDS</span><span class="bc-settings__item-detail">bsky.social</span>' + SVG_CHEV + '</button>'
+    + '<a class="bc-settings__item" href="https://atproto.tools/at/' + (session && session.did ? encodeURIComponent(session.did) : '') + '" target="_blank" rel="noopener" style="text-decoration:none"><span class="bc-settings__item-label">View on PDS</span><span class="bc-settings__item-detail">' + (session && session.pds ? session.pds.replace('https://','') : 'bsky.social') + '</span>' + SVG_CHEV + '</a>'
     + '</div>'
 
     // ── Account
