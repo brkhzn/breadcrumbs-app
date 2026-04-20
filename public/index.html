@@ -467,6 +467,46 @@
 
 
 
+  <!-- ═══ DETAIL PANEL ════════════════════════════════════════ -->
+  <div class="bc-detail-panel" id="detail-panel" role="dialog" aria-modal="true" aria-label="Entry detail">
+    <div class="bc-detail__header">
+      <button class="bc-icon-btn" id="detail-back" aria-label="Back">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <polyline points="12,4 6,10 12,16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+        </svg>
+      </button>
+      <span class="bc-detail__header-title">Entry</span>
+      <button class="bc-icon-btn" id="detail-edit" aria-label="Edit entry">
+        <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M11 2l3 3-8 8H3v-3l8-8z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" fill="none"/>
+        </svg>
+      </button>
+    </div>
+    <div class="bc-detail__scroll" id="detail-scroll">
+      <!-- populated by renderDetail() -->
+    </div>
+  </div><!-- /detail-panel -->
+
+
+  <!-- ═══ LOG MODAL ════════════════════════════════════════════ -->
+  <div class="bc-modal-bg" id="log-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="log-modal-title">
+    <div class="bc-modal">
+      <div class="bc-modal__grip" aria-hidden="true"></div>
+      <div class="bc-modal__head">
+        <span class="bc-modal__title" id="log-modal-title">Log progress</span>
+        <button class="bc-modal__close" id="log-modal-close" aria-label="Close">✕</button>
+      </div>
+      <div class="bc-modal__body" id="log-modal-body">
+        <!-- populated by openLogModal() -->
+      </div>
+      <div class="bc-modal__actions">
+        <button class="bc-btn bc-btn--secondary" id="log-modal-cancel">Cancel</button>
+        <button class="bc-btn bc-btn--primary"   id="log-modal-save">Save</button>
+      </div>
+    </div>
+  </div><!-- /log-modal -->
+
+
   <!-- ═══ UTILITY ══════════════════════════════════════════════ -->
   <div id="toasts"
     style="position:fixed;bottom:96px;left:50%;transform:translateX(-50%);z-index:2000;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:max-content;max-width:calc(100vw - 40px)">

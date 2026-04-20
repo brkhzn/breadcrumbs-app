@@ -253,7 +253,7 @@ function normalizeRecord(rec, collection) {
   var status  = val.status  || (val.progress ? STATUS.inProgress : STATUS.wantTo);
   return Object.assign({}, val, {
     type:type, authors:authors, genres:genres, status:status,
-    progress:val.progress||null, rkey:rkey, uri:rec.uri, collection:collection
+    progress:val.progress||null, history:val.history||[], rkey:rkey, uri:rec.uri, collection:collection
   });
 }
 
@@ -273,6 +273,7 @@ function buildRecord(entry, collection) {
   if (entry.type === 'book'    && entry.authors?.length) rec.authors   = entry.authors;
   if (entry.type === 'game'    && entry.developer)       rec.developer = entry.developer;
   if (entry.type === 'podcast' && entry.creator)         rec.creator   = entry.creator;
+  if (entry.history?.length) rec.history = entry.history;
   return rec;
 }
 
@@ -385,6 +386,15 @@ function init() {
   $('entry-modal').onclick = function(e) { if (e.target === this) closeModal(); };
   $('save-btn').onclick    = saveEntry;
   $('delete-btn').onclick  = deleteEntry;
+
+  // Detail panel
+  $('detail-back').onclick = closeDetail;
+
+  // Log modal
+  $('log-modal-close').onclick  = closeLogModal;
+  $('log-modal-cancel').onclick = closeLogModal;
+  $('log-modal').onclick = function(e) { if (e.target === this) closeLogModal(); };
+  $('log-modal-save').onclick   = submitLog;
 
 
   // Search
@@ -538,8 +548,8 @@ async function loadEntries() {
   $('entries').innerHTML = '';
   $('empty').classList.add('hidden');
   try {
-    await atpGetEntries();
-    render(); updateStats();
+    await Promise.all([atpGetEntries(), atpGetLists()]);
+    render(); updateStats(); renderLists();
   } catch(e) {
     toast('Failed to load: ' + e.message, 'error');
     render();
@@ -931,7 +941,7 @@ function render() {
     var typeLabel = LABELS[e.type] || e.type;
 
     return '<button class="bc-card bc-card--' + e.type + '"'
-      + ' onclick="openEdit(\'' + esc(e.rkey) + '\',\'' + esc(e.collection) + '\')"'
+      + ' onclick="openDetail(\'' + esc(e.rkey) + '\',\'' + esc(e.collection) + '\')"'
       + ' aria-label="' + esc(e.title) + '">'
 
       + '<div class="bc-card__spine" aria-hidden="true"></div>'
@@ -1309,17 +1319,38 @@ function searchBooks(query) {
   fetch('https://www.googleapis.com/books/v1/volumes?q=' + encodeURIComponent(query) + '&maxResults=6')
     .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then(function(data) {
-      if (!data.items?.length) { renderSearchResults([]); return; }
-      renderSearchResults(data.items.map(function(item) {
-        var v = item.volumeInfo;
-        var isbn = (v.industryIdentifiers||[]).find(function(x) { return x.type==='ISBN_13'; });
+      if (data.items?.length) {
+        renderSearchResults(data.items.map(function(item) {
+          var v = item.volumeInfo;
+          var isbn = (v.industryIdentifiers||[]).find(function(x) { return x.type==='ISBN_13'; });
+          return {
+            title:  v.title || 'Unknown',
+            author: (v.authors||[]).join(', '),
+            year:   (v.publishedDate||'').slice(0,4),
+            cover:  v.imageLinks?.thumbnail || v.imageLinks?.smallThumbnail || '',
+            isbn13: isbn ? isbn.identifier : '',
+            pages:  v.pageCount || ''
+          };
+        }));
+      } else {
+        searchOpenLibrary(query);
+      }
+    })
+    .catch(function() { searchOpenLibrary(query); });
+}
+
+function searchOpenLibrary(query) {
+  fetch('https://openlibrary.org/search.json?q=' + encodeURIComponent(query) + '&limit=8&fields=title,author_name,cover_i,number_of_pages_median,first_publish_year')
+    .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function(data) {
+      if (!data.docs?.length) { renderSearchResults([]); return; }
+      renderSearchResults(data.docs.slice(0, 6).map(function(doc) {
         return {
-          title:  v.title || 'Unknown',
-          author: (v.authors||[]).join(', '),
-          year:   (v.publishedDate||'').slice(0,4),
-          cover:  v.imageLinks?.thumbnail || v.imageLinks?.smallThumbnail || '',
-          isbn13: isbn ? isbn.identifier : '',
-          pages:  v.pageCount || ''
+          title:  doc.title || 'Unknown',
+          author: (doc.author_name||[]).join(', '),
+          year:   doc.first_publish_year ? String(doc.first_publish_year) : '',
+          cover:  doc.cover_i ? 'https://covers.openlibrary.org/b/id/' + doc.cover_i + '-M.jpg' : '',
+          pages:  doc.number_of_pages_median || ''
         };
       }));
     })
@@ -1631,6 +1662,330 @@ function toggleHideCovers() {
   var on = app.classList.contains('is-hide-covers');
   localStorage.setItem('bc_hide_covers', on);
   renderSettings();
+}
+
+// ── Detail panel ─────────────────────────────────────────────
+var detailRkey       = null;
+var detailCollection = null;
+
+function openDetail(rkey, collection) {
+  var e = entries.find(function(x) { return x.rkey === rkey && x.collection === collection; });
+  if (!e) return;
+  detailRkey       = rkey;
+  detailCollection = collection;
+  renderDetail(e);
+  var panel = $('detail-panel');
+  panel.classList.add('is-open');
+  panel.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDetail() {
+  $('detail-panel').classList.remove('is-open');
+  $('detail-panel').setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+  detailRkey = null;
+  detailCollection = null;
+}
+
+function _detailProgPct(entry) {
+  var p = entry.progress;
+  if (!p || typeof p === 'string') return null;
+  if (entry.type === 'book'  && p.currentPage && p.totalPages) return Math.min(100, Math.round(p.currentPage / p.totalPages * 100));
+  if (entry.type === 'game'  && p.completionPercent)            return Math.min(100, p.completionPercent);
+  if (entry.status === STATUS.completed)                         return 100;
+  return null;
+}
+
+function _detailProgLabel(entry) {
+  var p = entry.progress;
+  if (!p) return null;
+  if (typeof p === 'string') return p;
+  var t = entry.type;
+  if (t === 'book') {
+    if (p.currentPage && p.totalPages) return 'Page\u202f' + p.currentPage + '\u202f/\u202f' + p.totalPages;
+    if (p.currentPage) return 'Page\u202f' + p.currentPage;
+  }
+  if (t === 'show') {
+    var parts = [];
+    if (p.season)  parts.push('Season\u202f' + p.season);
+    if (p.episode) parts.push('Episode\u202f' + p.episode);
+    return parts.join(', ') || null;
+  }
+  if (t === 'game') {
+    var gp = [];
+    if (p.playtimeMinutes)   gp.push(Math.round(p.playtimeMinutes / 60) + '\u202fh played');
+    if (p.completionPercent) gp.push(p.completionPercent + '%\u202fdone');
+    if (p.narrativePosition) gp.push(p.narrativePosition);
+    return gp.join(' · ') || null;
+  }
+  if (t === 'podcast') {
+    var pp = [];
+    if (p.episodeNumber)   pp.push('Episode\u202f' + p.episodeNumber);
+    if (p.positionSeconds) pp.push(fmtSecs(p.positionSeconds));
+    return pp.join(' · ') || null;
+  }
+  return null;
+}
+
+function _historyItemDesc(item, type) {
+  if (item.action === 'completed') return 'Marked complete';
+  var p = item.progress;
+  if (!p) return 'Progress logged';
+  if (typeof p === 'string') return p;
+  if (type === 'book') {
+    if (p.currentPage && p.totalPages) return 'p.\u202f' + p.currentPage + ' / ' + p.totalPages;
+    if (p.currentPage) return 'p.\u202f' + p.currentPage;
+  }
+  if (type === 'show') {
+    var parts = [];
+    if (p.season)  parts.push('S' + p.season);
+    if (p.episode) parts.push('E' + p.episode);
+    return parts.join('\u202f') || 'Progress logged';
+  }
+  if (type === 'game') {
+    var gp = [];
+    if (p.completionPercent) gp.push(p.completionPercent + '%');
+    if (p.playtimeMinutes)   gp.push(Math.round(p.playtimeMinutes / 60) + 'h');
+    return gp.join(' · ') || 'Progress logged';
+  }
+  if (type === 'podcast') {
+    if (p.episodeNumber) return 'Ep\u202f' + p.episodeNumber;
+  }
+  return 'Progress logged';
+}
+
+function renderDetail(e) {
+  var scroll = $('detail-scroll');
+  var color  = DOT_COLORS[e.type] || '#888';
+  var subtitle = (e.authors||[]).join(', ') || e.creator || e.developer || '';
+
+  var heroStyle = e.coverUrl
+    ? 'background-image:url(' + esc(e.coverUrl) + ');background-size:cover;background-position:center'
+    : 'background:' + (COVER_BG[e.type] || COVER_BG.book);
+
+  var pct   = _detailProgPct(e);
+  var pLbl  = _detailProgLabel(e);
+  var inProg = e.status === STATUS.inProgress;
+  var isComplete = e.status === STATUS.completed;
+
+  var heroHtml = '<div class="bc-detail__hero" style="' + heroStyle + '">'
+    + '<div class="bc-detail__hero-scrim"></div>'
+    + '<div class="bc-detail__hero-body">'
+    + '<span class="bc-detail__stamp">' + esc(LABELS[e.type] || e.type) + '</span>'
+    + '<h2 class="bc-detail__title">' + esc(e.title) + '</h2>'
+    + (subtitle ? '<p class="bc-detail__sub">' + esc(subtitle) + '</p>' : '')
+    + '</div>'
+    + '</div>';
+
+  var progCard = '';
+  if (e.status !== STATUS.wantTo) {
+    var trackHtml = '';
+    if (pct !== null) {
+      trackHtml = '<div class="bc-detail__track">'
+        + '<div class="bc-detail__fill" style="width:' + pct + '%;background:' + color + '"></div>'
+        + '</div>'
+        + '<div class="bc-detail__track-row"><span>' + pct + '%</span><span>' + esc(STATUS_LABELS[e.status] || '') + '</span></div>';
+    }
+
+    var btns = '';
+    if (!isComplete) {
+      btns = '<div class="bc-detail__btns">'
+        + '<button class="bc-btn bc-btn--secondary bc-detail__log-btn" onclick="openLogModal(\'' + esc(e.rkey) + '\',\'' + esc(e.collection) + '\')">'
+        + '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3"/><line x1="8" y1="5" x2="8" y2="8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="8" y1="8" x2="10" y2="10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>'
+        + 'Log progress</button>'
+        + '<button class="bc-btn bc-btn--secondary bc-detail__fin-btn" onclick="markDetailComplete()">'
+        + 'Mark complete</button>'
+        + '</div>';
+    }
+
+    progCard = '<div class="bc-detail__card">'
+      + '<div class="bc-detail__card-head">Progress</div>'
+      + (pLbl ? '<div class="bc-detail__prog-lbl">' + esc(pLbl) + '</div>' : '<p class="bc-detail__no-prog">No progress logged yet.</p>')
+      + trackHtml
+      + btns
+      + '</div>';
+  }
+
+  var notesCard = '';
+  if (e.notes) {
+    notesCard = '<div class="bc-detail__card">'
+      + '<div class="bc-detail__card-head">Notes</div>'
+      + '<blockquote class="bc-margin-note">'
+      + '<span class="bc-margin-note__mark" aria-hidden="true">\u201c</span>'
+      + '<p class="bc-margin-note__text">' + esc(e.notes) + '</p>'
+      + '</blockquote>'
+      + '</div>';
+  }
+
+  var historyCard = '';
+  var hist = (e.history || []).slice().reverse();
+  if (hist.length) {
+    historyCard = '<div class="bc-detail__card">'
+      + '<div class="bc-detail__card-head">History <span class="bc-detail__count">' + hist.length + '</span></div>'
+      + '<div class="bc-history">'
+      + hist.map(function(item) {
+          return '<div class="bc-history__item">'
+            + '<div class="bc-history__dot" style="background:' + color + ';opacity:0.7"></div>'
+            + '<div class="bc-history__body">'
+            + '<div class="bc-history__when">' + esc(fmtDate(item.ts)) + '</div>'
+            + '<div class="bc-history__what">' + esc(_historyItemDesc(item, e.type)) + '</div>'
+            + (item.note ? '<div class="bc-history__note">' + esc(item.note) + '</div>' : '')
+            + '</div>'
+            + '</div>';
+        }).join('')
+      + '</div>'
+      + '</div>';
+  }
+
+  var ratingHtml = '';
+  if (e.rating) {
+    var stars = '';
+    for (var i = 1; i <= 5; i++) stars += (i <= e.rating ? '★' : '☆');
+    ratingHtml = '<div class="bc-detail__card">'
+      + '<div class="bc-detail__card-head">Rating</div>'
+      + '<div style="font-size:22px;color:var(--accent);letter-spacing:2px">' + stars + '</div>'
+      + '</div>';
+  }
+
+  scroll.innerHTML = heroHtml
+    + '<div class="bc-detail__body">'
+    + progCard
+    + notesCard
+    + ratingHtml
+    + historyCard
+    + '</div>';
+
+  $('detail-edit').onclick = function() {
+    closeDetail();
+    openEdit(e.rkey, e.collection);
+  };
+}
+
+async function markDetailComplete() {
+  var e = entries.find(function(x) { return x.rkey === detailRkey && x.collection === detailCollection; });
+  if (!e) return;
+  var updated = Object.assign({}, e, {
+    status: STATUS.completed,
+    history: (e.history || []).concat([{ ts: new Date().toISOString(), action: 'completed' }])
+  });
+  await _saveEntryUpdate(updated);
+}
+
+// ── Log modal ─────────────────────────────────────────────────
+var logRkey       = null;
+var logCollection = null;
+
+function openLogModal(rkey, collection) {
+  var e = entries.find(function(x) { return x.rkey === rkey && x.collection === collection; });
+  if (!e) return;
+  logRkey       = rkey;
+  logCollection = collection;
+
+  var p = (e.progress && typeof e.progress !== 'string') ? e.progress : {};
+  var progFields = '';
+  if (e.type === 'book') {
+    progFields = '<div class="bc-progrow">'
+      + '<input class="bc-input" id="lf-page" type="number" min="0" placeholder="Page" value="' + (p.currentPage || '') + '">'
+      + '<span class="bc-progrow__of">of</span>'
+      + '<input class="bc-input" id="lf-total" type="number" min="1" placeholder="Total" value="' + (p.totalPages || '') + '">'
+      + '</div>';
+  } else if (e.type === 'show') {
+    progFields = '<div class="bc-progrow">'
+      + '<input class="bc-input" id="lf-season" type="number" min="1" placeholder="Season" value="' + (p.season || '') + '">'
+      + '<input class="bc-input" id="lf-episode" type="number" min="1" placeholder="Episode" value="' + (p.episode || '') + '">'
+      + '</div>';
+  } else if (e.type === 'game') {
+    progFields = '<div class="bc-progrow" style="margin-bottom:8px">'
+      + '<input class="bc-input" id="lf-hours" type="number" min="0" placeholder="Hours played" value="' + (p.playtimeMinutes ? Math.round(p.playtimeMinutes / 60) : '') + '">'
+      + '<input class="bc-input" id="lf-pct" type="number" min="0" max="100" placeholder="% done" value="' + (p.completionPercent || '') + '">'
+      + '</div>'
+      + '<input class="bc-input" id="lf-narrative" placeholder="Where are you in the story? (optional)" maxlength="128" value="' + esc(p.narrativePosition || '') + '">';
+  } else if (e.type === 'podcast') {
+    progFields = '<div class="bc-progrow">'
+      + '<input class="bc-input" id="lf-epnum" type="number" min="1" placeholder="Episode" value="' + (p.episodeNumber || '') + '">'
+      + '<input class="bc-input" id="lf-pos" placeholder="Position (1:23:45)" value="' + (p.positionSeconds ? fmtSecs(p.positionSeconds) : '') + '">'
+      + '</div>';
+  } else if (e.type === 'movie') {
+    progFields = '<p style="font-size:13px;color:var(--fg-3);font-style:italic;padding:4px 0">Status carries progress for films.</p>';
+  }
+
+  $('log-modal-body').innerHTML = '<div class="bc-log__entry-name">' + esc(e.title) + '</div>'
+    + (progFields ? '<div class="bc-field"><div class="bc-label">Progress</div>' + progFields + '</div>' : '')
+    + '<div class="bc-field">'
+    + '<div class="bc-label">Note <span class="bc-label__hint">optional</span></div>'
+    + '<textarea class="bc-textarea" id="lf-note" placeholder="Quick thought\u2026" rows="2"></textarea>'
+    + '</div>';
+
+  $('log-modal').style.display = 'flex';
+}
+
+function closeLogModal() {
+  $('log-modal').style.display = 'none';
+  logRkey = null; logCollection = null;
+}
+
+async function submitLog() {
+  var e = entries.find(function(x) { return x.rkey === logRkey && x.collection === logCollection; });
+  if (!e) return;
+  var now = new Date().toISOString();
+  var note = ($('lf-note') && $('lf-note').value.trim()) || null;
+
+  var newProgress = null;
+  if (e.type === 'book') {
+    var cp = parseInt($('lf-page') && $('lf-page').value) || null;
+    var tp = parseInt($('lf-total') && $('lf-total').value) || null;
+    if (cp || tp) newProgress = Object.assign({}, e.progress && typeof e.progress !== 'string' ? e.progress : {}, { currentPage:cp, totalPages:tp, updatedAt:now });
+  } else if (e.type === 'show') {
+    var se = parseInt($('lf-season') && $('lf-season').value) || null;
+    var ep = parseInt($('lf-episode') && $('lf-episode').value) || null;
+    if (se || ep) newProgress = { season:se, episode:ep, updatedAt:now };
+  } else if (e.type === 'game') {
+    var hr = parseFloat($('lf-hours') && $('lf-hours').value);
+    var pm = (!isNaN(hr) && hr > 0) ? Math.round(hr * 60) : null;
+    var pc = parseInt($('lf-pct') && $('lf-pct').value) || null;
+    var np = ($('lf-narrative') && $('lf-narrative').value.trim()) || null;
+    if (pm || pc || np) newProgress = { playtimeMinutes:pm, completionPercent:pc, narrativePosition:np, updatedAt:now };
+  } else if (e.type === 'podcast') {
+    var en = parseInt($('lf-epnum') && $('lf-epnum').value) || null;
+    var ps = parseSecs(($('lf-pos') && $('lf-pos').value.trim()) || '');
+    if (en || ps) newProgress = { episodeNumber:en, positionSeconds:ps, updatedAt:now };
+  }
+
+  var histItem = { ts: now, progress: newProgress || e.progress, note: note };
+  var updated = Object.assign({}, e, {
+    progress: newProgress || e.progress,
+    history:  (e.history || []).concat([histItem])
+  });
+
+  $('log-modal-save').textContent = 'Saving\u2026';
+  $('log-modal-save').disabled = true;
+  try {
+    await _saveEntryUpdate(updated);
+    closeLogModal();
+    toast('Progress logged!');
+  } catch(err) {
+    toast('Save failed: ' + err.message, 'error');
+  } finally {
+    $('log-modal-save').textContent = 'Save';
+    $('log-modal-save').disabled = false;
+  }
+}
+
+async function _saveEntryUpdate(updated) {
+  var idx = entries.findIndex(function(x) { return x.rkey === updated.rkey && x.collection === updated.collection; });
+  if (isDemo) {
+    if (idx >= 0) entries[idx] = updated;
+    saveDemoEntries();
+  } else {
+    await atpUpdateEntry(updated.rkey, updated.collection, updated);
+    await atpGetEntries();
+  }
+  render(); updateStats();
+  if (detailRkey === updated.rkey) {
+    var fresh = entries.find(function(x) { return x.rkey === updated.rkey && x.collection === updated.collection; });
+    if (fresh) renderDetail(fresh);
+  }
 }
 
 // ── Export ────────────────────────────────────────────────────
