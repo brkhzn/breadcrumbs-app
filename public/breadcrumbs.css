@@ -194,6 +194,32 @@
   --shadow-xs: 0 1px 2px rgba(0,0,0,0.35); --shadow-sm: 0 2px 6px rgba(0,0,0,0.35), 0 1px 2px rgba(0,0,0,0.25); --shadow-book: 2px 2px 0 rgba(0,0,0,0.40);
 }
 
+[data-palette="slate"] {
+  --bg: #F2F2F2; --bg-raised: #F8F8F8; --bg-inset: #E8E8E8; --bg-highest: #FAFAFA;
+  --fg: #1A1A1A; --fg-2: #2A2A2A; --fg-3: #555555; --fg-4: #888888;
+  --border: rgba(26,26,26,0.12); --border-strong: rgba(26,26,26,0.22); --rule: rgba(26,26,26,0.08);
+  --parchment: #F2F2F2; --parchment-warm: #E8E8E8; --parchment-deep: #DCDCDC;
+  --ivory: #F8F8F8; --cream: #FAFAFA;
+  --ink: #1A1A1A; --ink-soft: #2A2A2A; --ink-muted: #555555; --ink-faint: #888888; --ink-whisper: rgba(26,26,26,0.15);
+  --accent: #4A6B8A; --accent-soft: #8AB0CC; --accent-wash: #C8DDE8;
+  --moss: #4A6B4A; --moss-soft: #88BB88; --moss-wash: #C8E0C8;
+  --plum: #6A5090; --plum-soft: #B0A0D0; --plum-wash: #D8D0F0;
+  --ochre: #8A7030; --ochre-soft: #C8B878; --ochre-wash: #E8DEC0;
+  --rust: #8A4848; --rust-soft: #C89090; --rust-wash: #E8D0C8;
+  --teal: #2A7878; --teal-soft: #7AB8B8; --teal-wash: #C0DEDE;
+}
+[data-palette="slate"][data-mode="dark"] {
+  --bg: #141414; --bg-raised: #1E1E1E; --bg-inset: #181818; --bg-highest: #262626;
+  --fg: #E0E0E0; --fg-2: #BEBEBE; --fg-3: #888888; --fg-4: #606060;
+  --border: rgba(224,224,224,0.12); --border-strong: rgba(224,224,224,0.22); --rule: rgba(224,224,224,0.08);
+  --parchment: #141414; --parchment-warm: #181818; --ivory: #1E1E1E; --cream: #E0E0E0;
+  --ink: #E0E0E0; --ink-soft: #BEBEBE; --ink-muted: #888888; --ink-faint: #606060; --ink-whisper: rgba(224,224,224,0.15);
+  --accent: #7098B8; --accent-soft: #3A5878; --accent-wash: #1A3050;
+  --burgundy-wash: #2A1818; --moss-wash: #182018; --plum-wash: #1A1428;
+  --ochre-wash: #201C10; --rust-wash: #221410; --teal-wash: #0E1E1E; --lavender-wash: #181820;
+  --shadow-xs: 0 1px 2px rgba(0,0,0,0.35); --shadow-sm: 0 2px 6px rgba(0,0,0,0.35), 0 1px 2px rgba(0,0,0,0.25); --shadow-book: 2px 2px 0 rgba(0,0,0,0.40);
+}
+
 /* ── Reset & base ────────────────────────────────────────── */
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 html, body { height:100%; overflow:hidden; }

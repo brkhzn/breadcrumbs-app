@@ -37,6 +37,7 @@ var PALETTES = [
   { id:'ember',  name:'Ember',  light:{bg:'#F5EEE0',fg:'#2C1E0E'}, dark:{bg:'#1A1510',fg:'#E8D5B5'}, accent:'#B06820' },
   { id:'ocean',  name:'Ocean',  light:{bg:'#EBF0F5',fg:'#1A2535'}, dark:{bg:'#0C1118',fg:'#C0D4E8'}, accent:'#2C5F8A' },
   { id:'ink',    name:'Ink',    light:{bg:'#F5EFE2',fg:'#2A2520'}, dark:{bg:'#14110C',fg:'#F1E8D5'}, accent:'#8A3B3B' },
+  { id:'slate',  name:'Slate',  light:{bg:'#F2F2F2',fg:'#1A1A1A'}, dark:{bg:'#141414',fg:'#E0E0E0'}, accent:'#4A6B8A' },
 ];
 
 // Fallback CSS-gradient covers (used when no coverUrl)
@@ -273,6 +274,7 @@ function buildRecord(entry, collection) {
   if (entry.type === 'book'    && entry.authors?.length) rec.authors   = entry.authors;
   if (entry.type === 'game'    && entry.developer)       rec.developer = entry.developer;
   if (entry.type === 'podcast' && entry.creator)         rec.creator   = entry.creator;
+  if (entry.description)     rec.description = entry.description;
   if (entry.history?.length) rec.history = entry.history;
   return rec;
 }
@@ -1688,7 +1690,7 @@ function renderSettings() {
     + '<div class="bc-settings__head">Your data</div>'
     + '<button class="bc-settings__item" id="s-export"><span class="bc-settings__item-label">Export as JSON</span><span class="bc-settings__item-detail">all entries &amp; lists</span>' + SVG_CHEV + '</button>'
     + '<button class="bc-settings__item" id="s-refresh"><span class="bc-settings__item-label">Refresh from PDS</span>' + SVG_CHEV + '</button>'
-    + '<a class="bc-settings__item" href="https://atproto.tools/at/' + (session && session.did ? encodeURIComponent(session.did) : '') + '" target="_blank" rel="noopener" style="text-decoration:none"><span class="bc-settings__item-label">View on PDS</span><span class="bc-settings__item-detail">' + (session && session.pds ? session.pds.replace('https://','') : 'bsky.social') + '</span>' + SVG_CHEV + '</a>'
+    + '<a class="bc-settings__item" href="https://bsky.app/profile/' + (session && session.did ? encodeURIComponent(session.did) : '') + '" target="_blank" rel="noopener" style="text-decoration:none"><span class="bc-settings__item-label">View on PDS</span><span class="bc-settings__item-detail">' + (session && session.pds ? session.pds.replace('https://','') : 'bsky.social') + '</span>' + SVG_CHEV + '</a>'
     + '</div>'
 
     // ── Account
@@ -1763,12 +1765,40 @@ function toggleHideCovers() {
 var detailRkey       = null;
 var detailCollection = null;
 
+async function _fetchDescription(e) {
+  try {
+    var desc = null;
+    if (e.type === 'movie' || e.type === 'show') {
+      var tmdbType = e.type === 'show' ? 'tv' : 'movie';
+      var r = await fetch('/api/tmdb?query=' + encodeURIComponent(e.title) + '&type=' + tmdbType);
+      if (r.ok) { var data = await r.json(); var first = data.results && data.results[0]; if (first && first.overview) desc = first.overview; }
+    } else if (e.type === 'book') {
+      var r = await fetch('https://www.googleapis.com/books/v1/volumes?q=' + encodeURIComponent(e.title) + '&maxResults=1');
+      if (r.ok) { var data = await r.json(); var first = data.items && data.items[0]; if (first && first.volumeInfo && first.volumeInfo.description) desc = first.volumeInfo.description; }
+    } else if (e.type === 'game') {
+      var r = await fetch('/api/rawg?query=' + encodeURIComponent(e.title));
+      if (r.ok) {
+        var data = await r.json(); var first = data.results && data.results[0];
+        if (first && first.id) {
+          var dr = await fetch('/api/rawg-detail?id=' + encodeURIComponent(first.id));
+          if (dr.ok) { var detail = await dr.json(); if (detail.description_raw) desc = detail.description_raw; }
+        }
+      }
+    }
+    if (desc) {
+      e.description = desc;
+      if (detailRkey === e.rkey && detailCollection === e.collection) renderDetail(e);
+    }
+  } catch(err) {}
+}
+
 function openDetail(rkey, collection) {
   var e = entries.find(function(x) { return x.rkey === rkey && x.collection === collection; });
   if (!e) return;
   detailRkey       = rkey;
   detailCollection = collection;
   renderDetail(e);
+  if (!e.description) _fetchDescription(e);
   var panel = $('detail-panel');
   panel.classList.add('is-open');
   panel.setAttribute('aria-hidden', 'false');
