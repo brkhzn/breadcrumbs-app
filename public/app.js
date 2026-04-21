@@ -1321,6 +1321,7 @@ function renderSearchResults(items) {
       + ' data-isbn13="'    + esc(item.isbn13||'')  + '"'
       + ' data-pages="'     + esc(String(item.pages||''))     + '"'
       + ' data-developer="'   + esc(item.developer||'')   + '"'
+      + ' data-rawg-id="'     + esc(String(item.rawgId||''))  + '"'
       + ' data-description="' + esc((item.description||'').slice(0,600)) + '">'
       + '<div class="bc-search-row__cover" style="' + coverStyle + '" aria-hidden="true"></div>'
       + '<div>'
@@ -1424,9 +1425,10 @@ function searchGames(query) {
       if (!data.results?.length) { renderSearchResults([]); return; }
       renderSearchResults(data.results.slice(0,6).map(function(item) {
         return {
-          title: item.name,
-          year:  (item.released||'').slice(0,4),
-          cover: item.background_image || ''
+          title:  item.name,
+          year:   (item.released||'').slice(0,4),
+          cover:  item.background_image || '',
+          rawgId: item.id
         };
       }));
     })
@@ -1455,6 +1457,14 @@ function selectResult(el) {
   $('f-search').value = '';
   $('search-results').classList.add('hidden');
   $('search-group').classList.add('hidden');
+
+  // For games, async-fetch description from RAWG detail endpoint
+  if (d.rawgId) {
+    fetch('/api/rawg-detail?id=' + encodeURIComponent(d.rawgId))
+      .then(function(r) { return r.json(); })
+      .then(function(data) { if (selectedMedia && data.description_raw) selectedMedia.description = data.description_raw; })
+      .catch(function() {});
+  }
 
   // Auto-fill progress fields from API data
   if (selType === 'book' && d.pages) {
