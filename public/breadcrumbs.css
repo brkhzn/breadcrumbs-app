@@ -1017,14 +1017,26 @@ input, textarea { font-family: inherit; }
 /* Color swatches */
 .bc-color-swatches { display:flex; gap:10px; flex-wrap:wrap; }
 .bc-color-swatch {
-  width:28px; height:28px; border-radius:50%; cursor:pointer; border:2px solid transparent;
+  width:28px; height:28px; border-radius:50%; cursor:pointer;
+  border:1px solid var(--border-strong, rgba(0,0,0,0.25));
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,0.08);
   transition:transform var(--dur-quick), border-color var(--dur-quick);
+}
+[data-mode="dark"] .bc-color-swatch {
+  border-color:rgba(255,255,255,0.18);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,0.25);
 }
 .bc-color-swatch:hover { transform:scale(1.12); }
 .bc-color-swatch.is-active {
-  border-color:var(--fg); box-shadow:0 0 0 2px var(--bg-raised);
+  border:2px solid var(--fg); box-shadow:0 0 0 2px var(--bg-raised);
   outline:2px solid var(--fg); outline-offset:2px;
 }
+
+/* Logomark — brand crimson with ivory dots; inverts on light mode to stand out */
+.bc-logomark__ring { fill:#7A2F2F; }
+.bc-logomark__dots circle { fill:#F5EFE2; }
+[data-mode="light"] .bc-logomark__ring { fill:#F5EFE2; stroke:#7A2F2F; stroke-width:3; }
+[data-mode="light"] .bc-logomark__dots circle { fill:#7A2F2F; }
 
 /* Entry picker inside list modal */
 .bc-list-entry-picker {

@@ -78,7 +78,20 @@ var listSelItems   = [];     // array of entry rkeys selected in modal
 
 var ATP_LIST_COLLECTION = 'app.breadcrumbs.list';
 var LIST_COLORS = ['#5F6B43','#6B4E71','#B08848','#A45A3C','#4F706D','#8A3B3B','#8A7BA8','#6B6358'];
-var ACCENT_COLORS = ['#5F6B43','#6B4E71','#B08848','#A45A3C','#4F706D','#8A3B3B','#8A7BA8','#6B6358','#F5F5F5','#9A9A9A','#1A1A1A'];
+// ROYGBIV, then neutrals
+var ACCENT_COLORS = [
+  '#8A3B3B', // red   (crimson)
+  '#A45A3C', // orange (rust)
+  '#B08848', // yellow (ochre)
+  '#5F6B43', // green  (moss)
+  '#4F706D', // blue   (teal)
+  '#8A7BA8', // indigo (lavender)
+  '#6B4E71', // violet (plum)
+  '#6B6358', // warm grey
+  '#F5F5F5', // white
+  '#9A9A9A', // grey
+  '#1A1A1A'  // black
+];
 
 // ── Helpers ──────────────────────────────────────────────────
 function $(id)  { return document.getElementById(id); }
