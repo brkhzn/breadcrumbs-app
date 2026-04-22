@@ -78,6 +78,7 @@ var listSelItems   = [];     // array of entry rkeys selected in modal
 
 var ATP_LIST_COLLECTION = 'app.breadcrumbs.list';
 var LIST_COLORS = ['#5F6B43','#6B4E71','#B08848','#A45A3C','#4F706D','#8A3B3B','#8A7BA8','#6B6358'];
+var ACCENT_COLORS = ['#5F6B43','#6B4E71','#B08848','#A45A3C','#4F706D','#8A3B3B','#8A7BA8','#6B6358','#F5F5F5','#9A9A9A','#1A1A1A'];
 
 // ── Helpers ──────────────────────────────────────────────────
 function $(id)  { return document.getElementById(id); }
@@ -99,6 +100,27 @@ function fmtDate(ts) {
   if (diff < 7)  return diff + 'd ago';
   var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   return months[d.getMonth()] + ' ' + d.getDate();
+}
+
+function dayKey(ts) {
+  var d = new Date(ts); d.setHours(0,0,0,0);
+  return d.getFullYear() + '-' + (d.getMonth()+1) + '-' + d.getDate();
+}
+
+function fmtDayHeader(ts) {
+  var d = new Date(ts); d.setHours(0,0,0,0);
+  var now = new Date(); now.setHours(0,0,0,0);
+  var diff = Math.round((now - d) / 86400000);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Yesterday';
+  var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var label = months[d.getMonth()] + ' ' + d.getDate();
+  if (d.getFullYear() !== now.getFullYear()) label += ', ' + d.getFullYear();
+  return label;
+}
+
+function entryActivityTs(e) {
+  return (e.progress && e.progress.updatedAt) || e.createdAt;
 }
 
 function fmtSecs(s) {
@@ -580,7 +602,7 @@ function loadDemoEntries() {
        authors:['Andy Weir'],
        progress:{currentPage:284,totalPages:476,updatedAt:new Date(now-2*86400000).toISOString()},
        status:STATUS.inProgress,genres:['Sci-Fi'],rating:5,
-       description:'The lone survivor of a desperate last-chance mission wakes up with no memory of who he is or how he got here — millions of miles from home. His only companion is an alien from a distant star system. Together they must solve the greatest mystery in the universe to save Earth.',
+       description:'The lone survivor of a desperate last-chance mission wakes up with no memory of who he is or how he got here, millions of miles from home. His only companion is an alien from a distant star system. Together they must solve the greatest mystery in the universe to save Earth.',
        notes:'Rocky is the best first contact I\'ve read. Genuinely moved by the engineering.',
        coverUrl:'https://covers.openlibrary.org/b/isbn/9780593135204-M.jpg',
        createdAt:new Date(now-2*86400000).toISOString()},
@@ -600,7 +622,7 @@ function loadDemoEntries() {
       {rkey:'4',collection:'app.breadcrumbs.game',type:'game',title:"Baldur's Gate 3",
        developer:'Larian Studios',
        description:'Gather your party and return to the Forgotten Realms in a tale of fellowship and betrayal, sacrifice and survival, and the lure of absolute power.',
-       progress:{playtimeMinutes:2520,completionPercent:42,narrativePosition:'Act 2 — Moonrise Towers',
+       progress:{playtimeMinutes:2520,completionPercent:42,narrativePosition:'Act 2: Moonrise Towers',
                  updatedAt:new Date(now-9*86400000).toISOString()},
        status:STATUS.inProgress,genres:['RPG'],rating:5,
        notes:'Dark Urge playthrough.',
@@ -639,7 +661,7 @@ function renderLists() {
       '<div class="bc-empty">'
       + '<svg width="32" height="32" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M5 3h10a1 1 0 011 1v13l-6-3.5L4 17V4a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5"/></svg>'
       + '<h3>No lists yet</h3>'
-      + '<p>Gather your breadcrumbs into a curated list — winter reads, rewatch queue, anything.</p>'
+      + '<p>Gather your breadcrumbs into a list: winter reads, rewatch queue, anything.</p>'
       + '<button class="bc-btn bc-btn--secondary" style="margin-top:18px" id="create-list-btn">'
       + '<svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true"><line x1="10" y1="4" x2="10" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="4" y1="10" x2="16" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
       + ' New list</button>'
@@ -899,7 +921,7 @@ async function deleteList(rkey) {
 }
 
 async function refreshEntries() {
-  if (isDemo) { toast('Demo mode — no server to refresh'); return; }
+  if (isDemo) { toast('Demo mode: no server to refresh'); return; }
   await loadEntries();
   toast('Refreshed from PDS');
 }
@@ -961,12 +983,25 @@ function render() {
     $('empty-title').textContent = isFiltered ? 'No matches' : 'Drop your first breadcrumb';
     $('empty-body').textContent  = isFiltered
       ? 'Nothing here with those filters. Try clearing them, or tap + to add something new.'
-      : 'Start tracking a book, show, film, game, or podcast — and always know exactly where you left off.';
+      : 'Start tracking a book, show, film, game, or podcast. Always know exactly where you left off.';
     return;
   }
   empty.classList.add('hidden');
 
-  list.innerHTML = shown.map(function(e) {
+  var sorted = shown.slice().sort(function(a, b) {
+    return new Date(entryActivityTs(b)) - new Date(entryActivityTs(a));
+  });
+
+  var lastKey = null;
+  list.innerHTML = sorted.map(function(e) {
+    var ts  = entryActivityTs(e);
+    var key = dayKey(ts);
+    var header = '';
+    if (key !== lastKey) {
+      header = '<div class="bc-day-header">' + esc(fmtDayHeader(ts)) + '</div>';
+      lastKey = key;
+    }
+
     var coverStyle = e.coverUrl
       ? 'background-image:url(' + esc(e.coverUrl) + ');background-size:cover;background-position:center'
       : 'background:' + (COVER_BG[e.type] || COVER_BG.book);
@@ -976,7 +1011,8 @@ function render() {
     var statusStr = e.status !== STATUS.inProgress ? (STATUS_LABELS[e.status]||'') : '';
     var typeLabel = LABELS[e.type] || e.type;
 
-    return '<button class="bc-card bc-card--' + e.type + '"'
+    return header
+      + '<button class="bc-card bc-card--' + e.type + '"'
       + ' onclick="openDetail(\'' + esc(e.rkey) + '\',\'' + esc(e.collection) + '\')"'
       + ' aria-label="' + esc(e.title) + '">'
 
@@ -991,7 +1027,7 @@ function render() {
       + '<span class="bc-pill bc-pill--' + e.type + '">'
       + (CAT_SVG[e.type]||'') + ' ' + esc(typeLabel)
       + '</span>'
-      + '<span class="bc-card__date">' + fmtDate(e.createdAt) + '</span>'
+      + '<span class="bc-card__date">' + fmtDate(ts) + '</span>'
       + '</div>'
 
       + '<div class="bc-card__title">' + esc(e.title) + '</div>'
@@ -1352,7 +1388,7 @@ function searchTMDB(query, type) {
       }));
     })
     .catch(function() {
-      $('search-results').innerHTML = '<div class="bc-search-msg">Search unavailable — enter title manually.</div>';
+      $('search-results').innerHTML = '<div class="bc-search-msg">Search unavailable. Enter title manually.</div>';
     });
 }
 
@@ -1397,7 +1433,7 @@ function searchOpenLibrary(query) {
       }));
     })
     .catch(function() {
-      $('search-results').innerHTML = '<div class="bc-search-msg">Search unavailable — enter title manually.</div>';
+      $('search-results').innerHTML = '<div class="bc-search-msg">Search unavailable. Enter title manually.</div>';
     });
 }
 
@@ -1416,7 +1452,7 @@ function searchPodcasts(query) {
       }));
     })
     .catch(function() {
-      $('search-results').innerHTML = '<div class="bc-search-msg">Search unavailable — enter title manually.</div>';
+      $('search-results').innerHTML = '<div class="bc-search-msg">Search unavailable. Enter title manually.</div>';
     });
 }
 
@@ -1435,7 +1471,7 @@ function searchGames(query) {
       }));
     })
     .catch(function() {
-      $('search-results').innerHTML = '<div class="bc-search-msg">Search unavailable — enter title manually.</div>';
+      $('search-results').innerHTML = '<div class="bc-search-msg">Search unavailable. Enter title manually.</div>';
     });
 }
 
@@ -1484,20 +1520,25 @@ function clearSelection() {
 
 
 // ── Analytics ────────────────────────────────────────────────
+var HEAT_DAYS = 90;
 function generateHeat(entries) {
-  var now    = new Date();
-  var weekMs = 7 * 24 * 3600 * 1000;
+  var today  = new Date();
+  today.setHours(0,0,0,0);
+  var dayMs  = 24 * 3600 * 1000;
   var types  = ['book','show','movie','game','podcast'];
   var heat   = {};
   types.forEach(function(t) {
     heat[t] = {};
-    for (var i = 0; i < 26; i++) heat[t][i] = 0;
+    for (var i = 0; i < HEAT_DAYS; i++) heat[t][i] = 0;
   });
   entries.forEach(function(e) {
     if (!heat[e.type]) return;
-    var weeksAgo = Math.floor((now - new Date(e.createdAt)) / weekMs);
-    if (weeksAgo >= 0 && weeksAgo < 26) {
-      var idx = 25 - weeksAgo;
+    var stamp = e.progress && e.progress.updatedAt ? e.progress.updatedAt : e.createdAt;
+    var d = new Date(stamp);
+    d.setHours(0,0,0,0);
+    var daysAgo = Math.floor((today - d) / dayMs);
+    if (daysAgo >= 0 && daysAgo < HEAT_DAYS) {
+      var idx = (HEAT_DAYS - 1) - daysAgo;
       heat[e.type][idx] = Math.min(3, heat[e.type][idx] + 1);
     }
   });
@@ -1521,12 +1562,12 @@ function updateStats() {
   var max = Math.max(1, Math.max.apply(null, Object.values(counts)));
   var heatData = generateHeat(entries);
 
-  // Build heat cells: 5 rows (one per category) × 26 cols (weeks)
+  // Build heat cells: 5 rows (one per category) × HEAT_DAYS cols (days)
   var heatTypes = ['book','show','movie','game','podcast'];
   var heatCells = '';
   for (var row = 0; row < 5; row++) {
     var t = heatTypes[row];
-    for (var col = 0; col < 26; col++) {
+    for (var col = 0; col < HEAT_DAYS; col++) {
       var level = heatData[t] ? (heatData[t][col] || 0) : 0;
       heatCells += '<div class="bc-heat__cell bc-heat__cell--' + t + '"'
         + (level ? ' data-level="' + level + '"' : '') + '></div>';
@@ -1554,9 +1595,9 @@ function updateStats() {
 
     + '<div class="bc-heat">'
     + '<h3>The stopping points</h3>'
-    + '<p class="bc-heat__sub">Every breadcrumb dropped, the past six months.</p>'
-    + '<div class="bc-heat__grid">' + heatCells + '</div>'
-    + '<div class="bc-heat__legend"><span>6 mo ago</span><span>3 mo ago</span><span>Today</span></div>'
+    + '<p class="bc-heat__sub">Every breadcrumb dropped, the past ' + HEAT_DAYS + ' days.</p>'
+    + '<div class="bc-heat__grid" style="grid-template-columns:repeat(' + HEAT_DAYS + ',1fr)">' + heatCells + '</div>'
+    + '<div class="bc-heat__legend"><span>90d ago</span><span>60d ago</span><span>30d ago</span><span>Today</span></div>'
     + '</div>'
 
     + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">'
@@ -1582,9 +1623,18 @@ function updateStats() {
   var totalHours = Math.round(entries
     .filter(function(e) { return e.type === 'game' && e.progress && e.progress.playtimeMinutes; })
     .reduce(function(sum, e) { return sum + (e.progress.playtimeMinutes || 0); }, 0) / 60);
-  var totalEpisodes = entries
-    .filter(function(e) { return e.type === 'show' && e.progress && e.progress.episode; })
-    .reduce(function(sum, e) { return sum + (e.progress.episode || 0); }, 0);
+  var totalEpisodes = entries.reduce(function(sum, e) {
+    if (!e.progress) return sum;
+    if (e.type === 'show'    && e.progress.episode)       return sum + e.progress.episode;
+    if (e.type === 'podcast' && e.progress.episodeNumber) return sum + e.progress.episodeNumber;
+    return sum;
+  }, 0);
+  var filmsWatched = entries.filter(function(e) {
+    return e.type === 'movie' && e.status === STATUS.completed;
+  }).length;
+  var podcastHours = Math.round(entries
+    .filter(function(e) { return e.type === 'podcast' && e.progress && e.progress.positionSeconds; })
+    .reduce(function(sum, e) { return sum + (e.progress.positionSeconds || 0); }, 0) / 3600);
 
   // Completion rate & avg rating
   var startedCount = (sc[STATUS.completed]||0) + (sc[STATUS.abandoned]||0);
@@ -1594,13 +1644,15 @@ function updateStats() {
     ? Math.round(ratedEntries.reduce(function(sum, e) { return sum + e.rating; }, 0) / ratedEntries.length * 10) / 10
     : null;
 
-  if (totalPages || totalHours || totalEpisodes) {
+  if (totalPages || totalHours || totalEpisodes || filmsWatched || podcastHours) {
     html += '<div class="bc-consumption">'
       + '<div class="bc-consumption__title">Across all breadcrumbs</div>'
       + '<div class="bc-consumption__row">'
       + (totalPages    ? '<div class="bc-consumption__stat"><span class="bc-consumption__n">' + totalPages.toLocaleString() + '</span><span class="bc-consumption__l">pages read</span></div>' : '')
       + (totalEpisodes ? '<div class="bc-consumption__stat"><span class="bc-consumption__n">' + totalEpisodes + '</span><span class="bc-consumption__l">episodes</span></div>' : '')
       + (totalHours    ? '<div class="bc-consumption__stat"><span class="bc-consumption__n">' + totalHours + 'h</span><span class="bc-consumption__l">gaming</span></div>' : '')
+      + (podcastHours  ? '<div class="bc-consumption__stat"><span class="bc-consumption__n">' + podcastHours + 'h</span><span class="bc-consumption__l">listening</span></div>' : '')
+      + (filmsWatched  ? '<div class="bc-consumption__stat"><span class="bc-consumption__n">' + filmsWatched + '</span><span class="bc-consumption__l">films watched</span></div>' : '')
       + ((completionRate !== null) ? '<div class="bc-consumption__stat"><span class="bc-consumption__n">' + completionRate + '%</span><span class="bc-consumption__l">completion rate</span></div>' : '')
       + (avgRating ? '<div class="bc-consumption__stat"><span class="bc-consumption__n">★ ' + avgRating + '</span><span class="bc-consumption__l">avg rating</span></div>' : '')
       + '</div>'
@@ -1675,7 +1727,7 @@ function renderSettings() {
     + '<div class="bc-settings__item bc-settings__item--stack">'
     + '<span class="bc-settings__item-label">Accent color</span>'
     + '<div class="bc-color-swatches bc-color-swatches--sm">'
-    + LIST_COLORS.map(function(hex) {
+    + ACCENT_COLORS.map(function(hex) {
         var active = (localStorage.getItem('bc_accent') || '') === hex;
         return '<button type="button" class="bc-color-swatch' + (active ? ' is-active' : '') + '"'
           + ' style="background:' + hex + '" aria-label="Accent ' + hex + '"'
@@ -1710,18 +1762,19 @@ function renderSettings() {
 
     + '<div class="bc-about__desc">'
     + 'Breadcrumbs is a personal media log for people who never want to lose their place. '
-    + 'Track where you left off in books, shows, films, games, and podcasts &mdash; then pick up right where you stopped.'
+    + 'Track where you left off in books, shows, films, games, and podcasts, then pick up right where you stopped.'
     + '</div>'
 
     + '<div class="bc-about__section">'
     + '<div class="bc-about__section-head">Your data, your rules</div>'
     + '<div class="bc-about__section-body">'
-    + 'Everything you log is stored in your own Personal Data Server (PDS) &mdash; think of it as a private database that belongs to you, not us. '
-    + 'It uses AT Protocol, the same open standard that powers Bluesky.'
+    + 'Everything you log is stored in your own Personal Data Server (PDS): a private database that belongs to you, not us. '
+    + 'It uses AT Protocol, the same open standard that powers Bluesky. '
+    + '<a href="https://atproto.com" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline">Learn more about the project</a>.'
     + '</div>'
     + '<div class="bc-about__perks">'
     + '<div class="bc-about__perk"><span class="bc-about__perk-dot"></span><span>Export all your data as JSON at any time</span></div>'
-    + '<div class="bc-about__perk"><span class="bc-about__perk-dot"></span><span>Move to any compatible app &mdash; no lock-in</span></div>'
+    + '<div class="bc-about__perk"><span class="bc-about__perk-dot"></span><span>Move to any compatible app, no lock-in</span></div>'
     + '<div class="bc-about__perk"><span class="bc-about__perk-dot"></span><span>Delete everything permanently, whenever you want</span></div>'
     + '<div class="bc-about__perk"><span class="bc-about__perk-dot"></span><span>We never sell or share your information</span></div>'
     + '</div>'

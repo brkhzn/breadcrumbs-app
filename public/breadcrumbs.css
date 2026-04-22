@@ -338,6 +338,22 @@ input, textarea { font-family: inherit; }
 }
 .bc-entries { display:flex; flex-direction:column; gap:12px; }
 
+/* ── Day grouping header ─────────────────────────────────── */
+.bc-day-header {
+  font-family:var(--sans-ui);
+  font-size:11px; font-weight:600;
+  letter-spacing:0.14em; text-transform:uppercase;
+  color:var(--fg-4);
+  padding:14px 2px 6px;
+  border-top:1px solid var(--border);
+  margin-top:6px;
+}
+.bc-day-header:first-child {
+  border-top:0;
+  margin-top:0;
+  padding-top:2px;
+}
+
 /* ── Tab bar ─────────────────────────────────────────────── */
 .bc-tabs {
   position: absolute;
@@ -845,10 +861,10 @@ input, textarea { font-family: inherit; }
 .bc-heat__row-label--game    { color:var(--rust); }
 .bc-heat__row-label--podcast { color:var(--teal); }
 .bc-heat__grid {
-  display:grid; grid-template-columns:repeat(26,1fr);
-  gap:3px; flex:1;
+  display:grid; grid-template-columns:repeat(90,1fr);
+  gap:2px; flex:1;
 }
-.bc-heat__cell { aspect-ratio:1; border-radius:2px; background:var(--bg-inset); }
+.bc-heat__cell { aspect-ratio:1; border-radius:1px; background:var(--bg-inset); }
 [data-mode="dark"] .bc-heat__cell { background:rgba(241,232,213,0.06); }
 .bc-heat__cell--book[data-level="1"]    { background:var(--moss-wash); }
 .bc-heat__cell--book[data-level="2"]    { background:var(--moss-soft); }
