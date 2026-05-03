@@ -689,6 +689,50 @@ input, textarea { font-family: inherit; }
 }
 .bc-modal__actions .bc-btn { flex:1; }
 
+/* ── Bug report modal ───────────────────────────────────── */
+.bc-bug__intro {
+  font-family:var(--serif-body); font-style:italic; font-size:13px;
+  color:var(--fg-3); line-height:1.55;
+  padding:10px 14px; margin:0 0 16px;
+  background:rgba(176,104,32,0.08);
+  border:1px solid rgba(176,104,32,0.30);
+  border-radius:var(--r-md);
+}
+[data-mode="dark"] .bc-bug__intro {
+  background:rgba(212,168,64,0.08);
+  border-color:rgba(212,168,64,0.30);
+  color:var(--fg-2);
+}
+.bc-input--ta {
+  resize:vertical; min-height:120px; line-height:1.5;
+  font-family:var(--serif-body);
+}
+.bc-field--check { margin-top:4px; }
+.bc-check {
+  display:flex; gap:10px; align-items:flex-start;
+  font-family:var(--sans-ui); font-size:12px;
+  color:var(--fg-3); cursor:pointer; line-height:1.5;
+}
+.bc-check input[type="checkbox"] {
+  margin-top:2px; flex-shrink:0;
+  accent-color:var(--accent);
+}
+.bc-bug__error {
+  font-family:var(--sans-ui); font-size:12px;
+  color:#B0463B; padding:8px 12px; margin-top:10px;
+  background:rgba(176,70,59,0.08);
+  border:1px solid rgba(176,70,59,0.30);
+  border-radius:var(--r-md);
+}
+[data-mode="dark"] .bc-bug__error {
+  color:#E27866;
+  background:rgba(226,120,102,0.08);
+  border-color:rgba(226,120,102,0.30);
+}
+#bug-modal .bc-modal__body .bc-modal__actions {
+  padding:14px 0 0; border-top:0;
+}
+
 /* ── Auth ────────────────────────────────────────────────── */
 .bc-auth {
   padding:max(32px, calc(32px + env(safe-area-inset-top,0px))) 24px 40px;

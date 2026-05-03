@@ -1,126 +1,124 @@
 # Breadcrumbs
 
-**Never lose your place again.**
+A personal log for keeping track of where you left off in books, shows, films, games, and podcasts. Your records live on your own [AT Protocol](https://atproto.com/) Personal Data Server, the same kind of server that holds Bluesky posts. Sign in with your Bluesky handle and an app password.
 
-Breadcrumbs is a personal media log for people who never want to lose their place. Track where you left off in books, shows, films, games, and podcasts — then pick up right where you stopped.
+## A note on how this was built
 
-Built on [AT Protocol](https://atproto.com/), every entry lives in your own Personal Data Server. Your data is yours to export, move, or delete at any time. No lock-in.
+Most of this codebase was written by [Claude Code](https://claude.com/claude-code), Anthropic's CLI coding agent, with direction and review from a human (the repo owner). That includes the architecture, the UI, the AT Protocol integration, and most of the prose in the app. The README you're reading right now was also written that way. We're flagging this so nobody has to guess.
 
----
+What that means in practice:
 
-## Features
+- The code is real, runs in production, and has been reviewed before each commit.
+- Some patterns might be more verbose than a human-only codebase. We've kept them when they were clear, refactored when they got in the way.
+- If you find a bug or something that looks wrong, please open an issue. The whole point of having a bug report flow is to catch what review missed.
 
-- **Progress tracking** — log exactly where you left off, with type-specific fields (page number, season/episode, hours played, etc.)
-- **History log** — every progress update is recorded with an optional note, building a timeline of your journey through a book or series
-- **Lists** — curate custom collections (winter reads, rewatch queue, anything) with stacked cover art
-- **Media search** — autocomplete with cover art via TMDB, Google Books, OpenLibrary, and RAWG
-- **Sign in with Bluesky** — no new account needed; uses your existing Bluesky handle and app password
-- **Demo mode** — try the full app without signing in, data stored locally
-- **Analytics** — reading/watching/playing stats with a per-category heat map
-- **Theming** — four palettes (Forest, Ember, Ocean, Ink) × dark/light/system mode + custom accent color
-- **Responsive** — mobile-first with a two-column desktop layout, centered modals, and a sidebar of in-progress entries
-- **Data ownership** — export everything as JSON anytime; your records stay in your PDS even if this app disappears
+## What it does
 
----
+- Logs progress on books, shows, films, games, and podcasts with the right fields for each: page numbers, season/episode, hours played, completion percent, time-into-episode for podcasts.
+- Stores every entry as a typed record on your PDS. There is no Breadcrumbs database. We don't keep a copy.
+- Searches metadata APIs to fill in cover art, descriptions, and authors so you don't type everything by hand.
+- Groups your timeline by day so it reads like a journal, not a feed.
+- Charts a 90-day daily heatmap of your activity, broken out by media type.
+- Lets you build lists (winter reads, rewatch queue, whatever) and view them as stacked-cover collections.
+- Ships with a Demo Mode that uses local storage only, in case you want to try the UI without signing in.
+
+## What it doesn't do
+
+- No analytics, no tracking pixels, no third-party trackers.
+- No advertising. No data resale.
+- No accounts to create. The Bluesky/AT Protocol identity you already have is the account.
+- No private data store. We don't run a database.
+
+## A note on visibility
+
+Records on AT Protocol are public by design. Anyone who knows your handle can read your Breadcrumbs entries through tools like [atproto-browser.dev](https://atproto-browser.dev) or any other AT Protocol client. If you want a private reading log, this isn't the right tool. The in-app [Privacy](public/index.html) screen has the longer version of this.
 
 ## Architecture
 
 ```
-┌──────────────────────┐     ┌─────────────────────┐
-│  Frontend            │────▶│  AT Protocol (PDS)  │
-│  HTML + CSS + JS     │     │                     │
-│  (static, no build)  │     │  • Auth             │
-│  Cloudflare Pages    │     │  • Entries          │
-└──────────────────────┘     │  • Lists            │
-           │                 └─────────────────────┘
-           ▼
-┌──────────────────────┐
-│  Media Search APIs   │
-│  (proxied via CF     │
-│   Pages Functions)   │
-│  • TMDB              │
-│  • Google Books      │
-│  • OpenLibrary       │
-│  • RAWG              │
-└──────────────────────┘
+┌─────────────────────────┐     ┌──────────────────────┐
+│  Static frontend        │────▶│  AT Protocol PDS     │
+│  HTML + CSS + JS        │     │  (e.g. bsky.social)  │
+│  Cloudflare Pages       │     │                      │
+└─────────────────────────┘     │  • createSession     │
+              │                 │  • createRecord      │
+              ▼                 │  • listRecords       │
+┌─────────────────────────┐     └──────────────────────┘
+│  Pages Functions        │
+│  Media metadata proxies │
+│  • TMDB (films, shows)  │
+│  • RAWG (games)         │
+│  • iTunes (podcasts)    │
+│  • Open Library (books) │
+└─────────────────────────┘
 ```
 
-**Why AT Protocol?**
-- Your data lives in your own Personal Data Server — not our database
-- If this app ever shuts down, your records stay intact
-- Portable identity: use your existing Bluesky handle
-- Export or migrate to any compatible app at any time
+There is no build step. The frontend is hand-written HTML, CSS, and one `app.js` file. Pages Functions are used only to keep third-party API keys out of the browser.
 
----
-
-## Project Structure
+## Project layout
 
 ```
 breadcrumbs-app/
 ├── public/
-│   ├── index.html          # App shell + all static HTML
-│   ├── app.js              # All app logic (~1800 lines)
-│   ├── breadcrumbs.css     # Design system + component styles
-│   └── _headers            # Cloudflare security headers
+│   ├── index.html          # App shell + every screen
+│   ├── app.js              # All app logic
+│   ├── breadcrumbs.css     # Design tokens + every component
+│   ├── _headers            # Cloudflare security headers
+│   ├── manifest.json       # PWA manifest
+│   └── icons/              # PWA icons
 ├── functions/
 │   └── api/
-│       ├── tmdb.js         # TMDB proxy (movies + shows)
-│       ├── books.js        # Google Books proxy
-│       └── rawg.js         # RAWG proxy (games)
-├── lexicons/               # ATProto lexicon definitions
+│       ├── tmdb.js         # TMDB proxy (films, shows)
+│       ├── rawg.js         # RAWG search
+│       └── rawg-detail.js  # RAWG detail (descriptions)
+├── lexicons/               # AT Protocol record schemas
 └── README.md
 ```
 
----
+## Running it locally
 
-## Local Development
-
-No build step needed.
+You need Node only because of `wrangler`. There is no npm install step beyond that.
 
 ```bash
-# Option 1: open directly
-open public/index.html
-
-# Option 2: local server with Cloudflare Workers (needed for media search)
+# Run with Cloudflare Pages Dev (needed for media search)
 npx wrangler pages dev public
 ```
 
----
+Then open `http://localhost:8788`.
 
-## Deployment
+If you want to skip the dev server, you can also open `public/index.html` directly. Search will fail because the API proxies aren't reachable, but everything else works against your real PDS.
 
-### Cloudflare Pages
+## Deploying to Cloudflare Pages
 
-1. Push to GitHub
-2. Connect the repo in the Cloudflare Pages dashboard
-3. Settings:
-   - Build command: *(leave empty)*
-   - Build output directory: `public`
-4. Add API keys as environment variables:
-   - `TMDB_API_KEY` — [themoviedb.org](https://www.themoviedb.org/settings/api)
-   - `RAWG_API_KEY` — [rawg.io/apidocs](https://rawg.io/apidocs)
-5. Deploy
+1. Push to GitHub.
+2. Connect the repo in the Cloudflare Pages dashboard.
+3. Build settings: leave the build command empty. Set the build output directory to `public`.
+4. Add API keys as environment variables on the Pages project:
+   - `TMDB_API_KEY` from [themoviedb.org](https://www.themoviedb.org/settings/api)
+   - `RAWG_API_KEY` from [rawg.io/apidocs](https://rawg.io/apidocs)
 
-| Branch | Environment |
-|--------|-------------|
-| `main` | Production  |
-| `feat/*` | Preview   |
+For the bug-report feature you'll also need:
 
----
+- `GITHUB_TOKEN`: a fine-scoped personal access token with `Issues: Write` on this repo. Used by `functions/api/report-bug.js` to file user-submitted issues.
 
-## AT Protocol Lexicon
+`main` deploys to production. Other branches get preview URLs.
 
-Entries are stored as typed records in the user's PDS, one collection per media type:
+## AT Protocol records
 
-| Media type | Collection |
-|------------|------------|
-| Book       | `app.breadcrumbs.book` |
-| Show       | `app.breadcrumbs.show` |
-| Movie      | `app.breadcrumbs.movie` |
-| Game       | `app.breadcrumbs.game` |
+Every entry is stored as a typed record on the user's PDS, one collection per media type:
+
+| Media type | Collection                |
+|------------|---------------------------|
+| Book       | `app.breadcrumbs.book`    |
+| Show       | `app.breadcrumbs.show`    |
+| Film       | `app.breadcrumbs.movie`   |
+| Game       | `app.breadcrumbs.game`    |
 | Podcast    | `app.breadcrumbs.podcast` |
 
-**Example book record:**
+Lists are stored under `app.breadcrumbs.list`. Full schemas are in [`/lexicons`](./lexicons).
+
+Example book record:
+
 ```json
 {
   "$type": "app.breadcrumbs.book",
@@ -132,51 +130,29 @@ Entries are stored as typed records in the user's PDS, one collection per media 
     "totalPages": 476,
     "updatedAt": "2026-04-18T14:00:00.000Z"
   },
-  "history": [
-    { "ts": "2026-04-10T10:00:00.000Z", "progress": { "currentPage": 120 }, "note": "Can't put it down" },
-    { "ts": "2026-04-18T14:00:00.000Z", "progress": { "currentPage": 284 } }
-  ],
-  "notes": "Rocky is the best first contact I've ever read.",
   "rating": 5,
   "genres": ["Sci-Fi"],
+  "notes": "Rocky is the best first contact I've read.",
   "coverUrl": "https://covers.openlibrary.org/...",
   "createdAt": "2026-04-01T09:00:00.000Z"
 }
 ```
 
-Lists are stored under `app.breadcrumbs.list`.
+## Reporting a bug
 
-Full lexicon definitions are in [`/lexicons`](./lexicons).
+The app has a built-in "Report a bug" button in Settings. It files a tagged issue on this repo via a Cloudflare Function so we can track and triage it. Reports are public (since this repo is public), so don't include personal info or anything you'd rather keep private.
 
----
-
-## Roadmap
-
-- [x] AT Protocol authentication (Bluesky sign-in)
-- [x] CRUD operations to PDS with per-type collections
-- [x] Media search with cover art
-- [x] Progress tracking with type-specific fields
-- [x] Progress history log with notes
-- [x] Entry detail panel with history timeline
-- [x] Lists (create, edit, curate entries)
-- [x] Analytics + heat map
-- [x] Theming: 4 palettes × dark/light/system
-- [x] Responsive desktop layout + centered modals
-- [x] Demo mode (no sign-in required)
-- [ ] Podcast search (Podcast Index API)
-- [ ] Social features — see what friends are reading
-- [ ] Public profiles
-- [ ] PWA / offline support
-
----
+You can also open an issue directly on [GitHub Issues](https://github.com/brkhzn/breadcrumbs-app/issues) if you'd rather skip the in-app form.
 
 ## Credits
 
 - [AT Protocol](https://atproto.com/) by Bluesky
-- [TMDB](https://www.themoviedb.org/) for movie and TV data
-- [Google Books](https://developers.google.com/books) + [OpenLibrary](https://openlibrary.org/dev/docs/api) for book data
-- [RAWG](https://rawg.io/) for game data
+- [TMDB](https://www.themoviedb.org/) for film and TV metadata
+- [Open Library](https://openlibrary.org/dev/docs/api) and [Google Books](https://developers.google.com/books) for book metadata
+- [RAWG](https://rawg.io/) for game metadata
+- [iTunes Search API](https://developer.apple.com/library/archive/documentation/AudioVideo/Conceptual/iTuneSearchAPI/) for podcast metadata
+- Most of the code was written by [Claude Code](https://claude.com/claude-code)
 
----
+## License
 
-MIT License
+MIT.

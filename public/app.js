@@ -482,6 +482,12 @@ function init() {
   $('save-btn').onclick    = saveEntry;
   $('delete-btn').onclick  = deleteEntry;
 
+  // Bug report modal
+  if ($('bug-modal-close')) $('bug-modal-close').onclick = closeBugReport;
+  if ($('bug-cancel'))      $('bug-cancel').onclick      = closeBugReport;
+  if ($('bug-submit'))      $('bug-submit').onclick      = submitBugReport;
+  if ($('bug-modal'))       $('bug-modal').onclick = function(e) { if (e.target === this) closeBugReport(); };
+
   // Detail panel
   $('detail-back').onclick = closeDetail;
 
@@ -1254,6 +1260,69 @@ function openEdit(rkey, collection) {
 
 function closeModal() { $('entry-modal').style.display = 'none'; }
 
+// ── Bug report ────────────────────────────────────────────────
+var APP_VERSION = 'v2.1.0';
+
+function openBugReport() {
+  $('bug-title').value = '';
+  $('bug-body').value  = '';
+  $('bug-include-meta').checked = true;
+  $('bug-error').classList.add('hidden');
+  $('bug-error').textContent = '';
+  $('bug-submit').disabled = false;
+  $('bug-submit').textContent = 'Send report';
+  $('bug-modal').style.display = 'flex';
+  setTimeout(function() { $('bug-title').focus(); }, 50);
+}
+function closeBugReport() { $('bug-modal').style.display = 'none'; }
+
+async function submitBugReport() {
+  var title = $('bug-title').value.trim();
+  var body  = $('bug-body').value.trim();
+  var err   = $('bug-error');
+  err.classList.add('hidden'); err.textContent = '';
+
+  if (!title) { err.textContent = 'A short title is required.'; err.classList.remove('hidden'); return; }
+  if (!body)  { err.textContent = 'Please describe what happened.'; err.classList.remove('hidden'); return; }
+
+  var includeMeta = $('bug-include-meta').checked;
+  var payload = { title:title, body:body, version:APP_VERSION };
+  if (includeMeta) {
+    payload.ua       = navigator.userAgent || '';
+    payload.viewport = window.innerWidth + 'x' + window.innerHeight;
+    payload.palette  = localStorage.getItem('bc_palette') || '';
+    payload.mode     = document.documentElement.getAttribute('data-mode') || '';
+  }
+
+  $('bug-submit').disabled = true;
+  $('bug-submit').textContent = 'Sending…';
+
+  try {
+    var res = await fetch('/api/report-bug', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    var data;
+    try { data = await res.json(); } catch(e) { data = {}; }
+    if (!res.ok) {
+      err.textContent = data.error || 'Could not send the report. Please try again.';
+      err.classList.remove('hidden');
+      $('bug-submit').disabled = false;
+      $('bug-submit').textContent = 'Send report';
+      return;
+    }
+    closeBugReport();
+    var msg = data.number ? ('Reported as issue #' + data.number + '. Thank you.') : 'Report sent. Thank you.';
+    toast(msg);
+  } catch(e) {
+    err.textContent = 'Network error. Please try again.';
+    err.classList.remove('hidden');
+    $('bug-submit').disabled = false;
+    $('bug-submit').textContent = 'Send report';
+  }
+}
+
 // ── Draft persistence (preserves an in-flight entry across re-auth) ───
 var DRAFT_KEY = 'bc_draft_entry';
 function captureFormDraft() {
@@ -1896,6 +1965,12 @@ function renderSettings() {
     + '<button class="bc-settings__item" id="s-privacy"><span class="bc-settings__item-label">Privacy details</span><span class="bc-settings__item-detail">what\'s public, what we collect</span>' + SVG_CHEV + '</button>'
     + '</div>'
 
+    // ── Help
+    + '<div class="bc-settings__section">'
+    + '<div class="bc-settings__head">Help</div>'
+    + '<button class="bc-settings__item" id="s-bug"><span class="bc-settings__item-label">Report a bug</span><span class="bc-settings__item-detail">files an issue on GitHub</span>' + SVG_CHEV + '</button>'
+    + '</div>'
+
     // ── Account
     + '<div class="bc-settings__section">'
     + '<div class="bc-settings__head">Account</div>'
@@ -1946,6 +2021,7 @@ function renderSettings() {
   $('s-refresh').onclick     = refreshEntries;
   $('s-logout').onclick      = logout;
   if ($('s-privacy')) $('s-privacy').onclick = function() { showPrivacy('main-screen'); };
+  if ($('s-bug'))     $('s-bug').onclick     = openBugReport;
 
 }
 

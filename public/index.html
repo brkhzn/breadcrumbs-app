@@ -545,6 +545,49 @@
   </div><!-- /entry-modal -->
 
 
+  <!-- ═══ BUG REPORT MODAL ════════════════════════════════════ -->
+  <div class="bc-modal-bg" id="bug-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="bug-modal-title">
+    <div class="bc-modal">
+      <div class="bc-modal__grip" aria-hidden="true"></div>
+      <div class="bc-modal__head">
+        <span class="bc-modal__title" id="bug-modal-title">Report a bug</span>
+        <button class="bc-modal__close" id="bug-modal-close" aria-label="Close">✕</button>
+      </div>
+      <div class="bc-modal__body">
+
+        <div class="bc-bug__intro">
+          This files a public issue on the project's GitHub repo. Don't include personal info or anything you'd rather keep private.
+        </div>
+
+        <div class="bc-field">
+          <label class="bc-label" for="bug-title">Short title</label>
+          <input class="bc-input" id="bug-title" type="text" maxlength="120" placeholder="e.g. Saving a podcast loses the time position">
+        </div>
+
+        <div class="bc-field">
+          <label class="bc-label" for="bug-body">What happened?</label>
+          <textarea class="bc-input bc-input--ta" id="bug-body" rows="6" maxlength="4000" placeholder="What did you do, what did you expect, what did you see instead? Steps to reproduce help a lot."></textarea>
+        </div>
+
+        <div class="bc-field bc-field--check">
+          <label class="bc-check">
+            <input type="checkbox" id="bug-include-meta" checked>
+            <span>Include browser info (user agent, viewport, theme). Helps with debugging.</span>
+          </label>
+        </div>
+
+        <div class="bc-bug__error hidden" id="bug-error"></div>
+
+        <div class="bc-modal__actions">
+          <button class="bc-btn bc-btn--secondary" id="bug-cancel">Cancel</button>
+          <button class="bc-btn bc-btn--primary" id="bug-submit">Send report</button>
+        </div>
+
+      </div>
+    </div>
+  </div><!-- /bug-modal -->
+
+
   <!-- ═══ LIST MODAL ══════════════════════════════════════════ -->
   <div class="bc-modal-bg" id="list-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="list-modal-title">
     <div class="bc-modal">
