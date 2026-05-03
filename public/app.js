@@ -2007,7 +2007,7 @@ function renderSettings() {
     + '</div>'
 
     + '<div class="bc-about__footer">'
-    + '<a href="https://bsky.app/profile/breadcrumbs.app" style="font-family:var(--sans-ui);font-size:11px;color:var(--fg-4);text-decoration:none">Follow on Bluesky</a>'
+    + '<a href="https://bsky.app/profile/mybreadcrumbs.cloud" style="font-family:var(--sans-ui);font-size:11px;color:var(--fg-4);text-decoration:none">Follow on Bluesky</a>'
     + '</div>'
     + '</div>'
     + '</div>';
