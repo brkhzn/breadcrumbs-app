@@ -208,15 +208,36 @@ function detectTheme() {
 }
 
 // ── AT Protocol ──────────────────────────────────────────────
-async function atpRequest(method, endpoint, body, pds) {
+function isExpiredTokenError(err) {
+  if (!err || !err.message) return false;
+  var m = err.message;
+  return m.indexOf('ExpiredToken') !== -1
+      || m.indexOf('InvalidToken') !== -1
+      || m.indexOf('expired') !== -1;
+}
+
+var _refreshInflight = null;
+
+async function atpRequest(method, endpoint, body, pds, _isRetry) {
   var url = (pds || session?.pds || DEFAULT_PDS) + '/xrpc/' + endpoint;
   var headers = {'Content-Type':'application/json'};
   if (session?.accessJwt) headers['Authorization'] = 'Bearer ' + session.accessJwt;
   var opts = {method:method, headers:headers};
   if (body && method !== 'GET') opts.body = JSON.stringify(body);
   var res = await fetch(url, opts);
-  var data = await res.json();
-  if (!res.ok) throw new Error(data.message || data.error || 'Request failed');
+  var data;
+  try { data = await res.json(); } catch(e) { data = {}; }
+  if (!res.ok) {
+    var err = new Error(data.message || data.error || 'Request failed');
+    err.error = data.error;
+    err.status = res.status;
+    if (!_isRetry && session?.refreshJwt && isExpiredTokenError(err)) {
+      var refreshed = await atpRefreshSession();
+      if (refreshed) return atpRequest(method, endpoint, body, pds, true);
+      authExpired();
+    }
+    throw err;
+  }
   return data;
 }
 
@@ -229,15 +250,45 @@ async function atpLogin(handle, password) {
   return session;
 }
 
-async function atpRefreshSession() {
-  if (!session?.refreshJwt) return false;
-  try {
-    var data = await atpRequest('POST', 'com.atproto.server.refreshSession', {});
+// Direct refresh call: must use the refresh JWT, not the (expired) access JWT.
+// Single in-flight promise so concurrent requests share one refresh.
+function atpRefreshSession() {
+  if (!session?.refreshJwt) return Promise.resolve(false);
+  if (_refreshInflight) return _refreshInflight;
+  var url = (session.pds || DEFAULT_PDS) + '/xrpc/com.atproto.server.refreshSession';
+  _refreshInflight = fetch(url, {
+    method:'POST',
+    headers:{'Authorization':'Bearer ' + session.refreshJwt}
+  }).then(async function(res) {
+    var data; try { data = await res.json(); } catch(e) { data = {}; }
+    if (!res.ok) return false;
     session.accessJwt  = data.accessJwt;
     session.refreshJwt = data.refreshJwt;
     localStorage.setItem('bc_atp_session', JSON.stringify(session));
     return true;
-  } catch(e) { return false; }
+  }).catch(function() { return false; })
+    .finally(function() { _refreshInflight = null; });
+  return _refreshInflight;
+}
+
+// Refresh token is gone or invalid. Stash any in-flight draft and send the
+// user back to sign in.
+var _authExpiredHandled = false;
+function authExpired() {
+  if (_authExpiredHandled) return;
+  _authExpiredHandled = true;
+  if (typeof captureFormDraft === 'function') captureFormDraft();
+  try { localStorage.removeItem('bc_atp_session'); } catch(e) {}
+  session = null;
+  toast('Session expired. Please sign in again.', 'error');
+  setTimeout(function() {
+    var auth = $('auth-screen'); var main = $('main-screen');
+    if (auth) auth.classList.add('active');
+    if (main) main.classList.remove('active');
+    var atp = $('atp-badge'); if (atp) atp.classList.add('hidden');
+    var err = $('auth-error'); if (err) err.classList.add('hidden');
+    _authExpiredHandled = false;
+  }, 800);
 }
 
 async function atpGetEntries() {
@@ -410,6 +461,13 @@ function init() {
   // Auth
   $('signin-btn').onclick  = signIn;
   $('demo-btn').onclick    = startDemo;
+  if ($('auth-privacy-link')) {
+    $('auth-privacy-link').onclick = function(e) {
+      e.preventDefault();
+      showPrivacy('auth-screen');
+    };
+  }
+  if ($('privacy-back')) $('privacy-back').onclick = hidePrivacy;
 
   // Auth: submit on Enter
   $('auth-password').addEventListener('keydown', function(e) {
@@ -572,6 +630,20 @@ function logout() {
   toast('Signed out');
 }
 
+function showPrivacy(returnTo) {
+  ['auth-screen','main-screen'].forEach(function(id) {
+    var el = $(id); if (el) el.classList.remove('active');
+  });
+  $('privacy-screen').classList.add('active');
+  $('privacy-screen').dataset.returnTo = returnTo || (session || isDemo ? 'main-screen' : 'auth-screen');
+  window.scrollTo(0, 0);
+}
+function hidePrivacy() {
+  $('privacy-screen').classList.remove('active');
+  var back = $('privacy-screen').dataset.returnTo || (session || isDemo ? 'main-screen' : 'auth-screen');
+  $(back).classList.add('active');
+}
+
 function showMain() {
   $('auth-screen').classList.remove('active');
   $('main-screen').classList.add('active');
@@ -585,6 +657,7 @@ function showMain() {
   renderSettings();
   updateStats();
   renderLists();
+  if (session) setTimeout(restoreFormDraftIfPresent, 200);
 }
 
 
@@ -1181,6 +1254,60 @@ function openEdit(rkey, collection) {
 
 function closeModal() { $('entry-modal').style.display = 'none'; }
 
+// ── Draft persistence (preserves an in-flight entry across re-auth) ───
+var DRAFT_KEY = 'bc_draft_entry';
+function captureFormDraft() {
+  var modalOpen = $('entry-modal') && $('entry-modal').style.display === 'flex';
+  if (!modalOpen) return;
+  try {
+    var draft = {
+      editRkey:       editRkey,
+      editCollection: editCollection,
+      selType:        selType,
+      selStatus:      selStatus,
+      selGenre:       selGenre,
+      selRating:      selRating,
+      selectedMedia:  selectedMedia,
+      title:          ($('f-search') && $('f-search').value) || '',
+      notes:          ($('f-notes')  && $('f-notes').value)  || '',
+      progress:       buildProgressObject(selType),
+      savedAt:        new Date().toISOString()
+    };
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  } catch(e) {}
+}
+function restoreFormDraftIfPresent() {
+  var raw; try { raw = localStorage.getItem(DRAFT_KEY); } catch(e) { raw = null; }
+  if (!raw) return;
+  var d; try { d = JSON.parse(raw); } catch(e) { return; }
+  localStorage.removeItem(DRAFT_KEY);
+  if (!d) return;
+  editRkey       = d.editRkey || null;
+  editCollection = d.editCollection || null;
+  selectedMedia  = d.selectedMedia || null;
+  selGenre       = d.selGenre || '';
+  selRating      = d.selRating || 0;
+  pickType(d.selType || 'book');
+  pickStatus(d.selStatus || STATUS.inProgress);
+  if ($('f-search')) $('f-search').value = d.title || '';
+  if ($('f-notes'))  $('f-notes').value  = d.notes || '';
+  if (selectedMedia && (selectedMedia.coverUrl || selectedMedia.description)) {
+    $('selected-media').classList.remove('hidden');
+    $('search-group').classList.add('hidden');
+    if (selectedMedia.coverUrl) {
+      $('selected-cover').style.cssText = 'background-image:url(' + esc(selectedMedia.coverUrl) + ');background-size:cover;background-position:center';
+    }
+    $('selected-title').textContent = selectedMedia.title || '';
+  }
+  if (d.progress) {
+    populateProgressFields({type:d.selType, progress:d.progress});
+  }
+  updateStars();
+  $('modal-title').textContent = editRkey ? 'Finish your edit' : 'Finish your breadcrumb';
+  $('entry-modal').style.display = 'flex';
+  toast('We kept your unsaved entry.');
+}
+
 function pickType(t) {
   selType = t;
   $$('.bc-type').forEach(function(b) {
@@ -1312,7 +1439,12 @@ async function saveEntry() {
     }
     render(); updateStats(); closeModal();
   } catch(e) {
-    toast('Save failed: ' + e.message, 'error');
+    if (isExpiredTokenError(e)) {
+      captureFormDraft();
+      // authExpired() shows its own toast and routes to sign-in.
+    } else {
+      toast('Save failed: ' + e.message, 'error');
+    }
   } finally {
     $('save-btn').textContent = 'Save';
     $('save-btn').disabled = false;
@@ -1758,6 +1890,12 @@ function renderSettings() {
     + '<a class="bc-settings__item" href="https://bsky.app/profile/' + (session && session.did ? encodeURIComponent(session.did) : '') + '" target="_blank" rel="noopener" style="text-decoration:none"><span class="bc-settings__item-label">View on PDS</span><span class="bc-settings__item-detail">' + (session && session.pds ? session.pds.replace('https://','') : 'bsky.social') + '</span>' + SVG_CHEV + '</a>'
     + '</div>'
 
+    // ── Privacy
+    + '<div class="bc-settings__section">'
+    + '<div class="bc-settings__head">Privacy</div>'
+    + '<button class="bc-settings__item" id="s-privacy"><span class="bc-settings__item-label">Privacy details</span><span class="bc-settings__item-detail">what\'s public, what we collect</span>' + SVG_CHEV + '</button>'
+    + '</div>'
+
     // ── Account
     + '<div class="bc-settings__section">'
     + '<div class="bc-settings__head">Account</div>'
@@ -1807,6 +1945,7 @@ function renderSettings() {
   $('s-export').onclick      = exportData;
   $('s-refresh').onclick     = refreshEntries;
   $('s-logout').onclick      = logout;
+  if ($('s-privacy')) $('s-privacy').onclick = function() { showPrivacy('main-screen'); };
 
 }
 
